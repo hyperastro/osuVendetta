@@ -14,3 +14,19 @@ How You Can Contribute:
 By participating, you'll be playing a crucial role in making Osu! a fairer and more enjoyable game for everyone. Thank you for your support!
 
 Code will be uploaded as soon as its confirmed to be stable if you want to contribute now DM me on discord
+
+
+
+#Using the Osu report Web Scraper script
+
+the script was written in python 3.10
+
+you will need to install the following dependencies 
+
+    pip install praw
+
+you will also need to request a API key from reddit
+
+Then input your api key in the script and run it. it should return the scoreID of the play followed by the type of cheat
+
+you can change the number of messages scraped by changing the limmit value it is set to 100 by default
