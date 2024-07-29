@@ -30,4 +30,4 @@ you will also need to request a API key from reddit
 
 Then input your api key in the script and run it. it should return the scoreID of the play followed by the type of cheat
 
-you can change the number of messages scraped by changing the limmit value it is set to 100 by default
+you can change the number of messages scraped by changing the limmit value, it is set to 100 by default
