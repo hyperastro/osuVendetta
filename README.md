@@ -17,7 +17,8 @@ Code will be uploaded as soon as its confirmed to be stable if you want to contr
 
 
 
-#Using the Osu report Web Scraper script
+
+**Using the Osu report Web Scraper script**
 
 the script was written in python 3.10
 
