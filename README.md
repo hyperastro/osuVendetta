@@ -7,7 +7,7 @@ Our goal is to train an AI model (using BERT, known for its bi-directional token
 How You Can Contribute: 
 
     Submit Replays: Help us improve our model by submitting both cheated and non-cheated replays on our Discord server.
-    Join our Discord: https://discord.gg/W4euVvjFKd
+    Join our Discord: https://discord.gg/BDU3W22HEW
 
     Contribute to the Codebase: If you're a developer, your contributions to our codebase would be greatly appreciated.
    
