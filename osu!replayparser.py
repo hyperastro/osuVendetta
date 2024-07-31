@@ -35,6 +35,7 @@ newfilename = "REPLAYDATA"+replay.replay_hash+".txt"
 output_file_path = str(newfilename)
 
 with open(output_file_path, "w") as file:
+    file.write(f"{replay.mods}\n")
     for data in converted_data_list:
         file.write(f"{data[0]},{data[1]},{data[2]},{data[3]}\n")
 
