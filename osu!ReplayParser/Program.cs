@@ -41,7 +41,7 @@ internal class Program
 
         Stopwatch sw = new Stopwatch();
         sw.Start();
-        Parallel.For(0, files.Count, i => ParseOsr(files[i].FullName, Path.Combine(outputDir, files[i].Name) + ".txt"));
+        Parallel.For(0, files.Count, i => ParseOsr(files[i].FullName, outputDir));
         sw.Stop();
 
         float msPerReplay = (float)sw.ElapsedMilliseconds / files.Count;
@@ -49,7 +49,7 @@ internal class Program
         Console.WriteLine($"Processing {files.Count} files took {sw.ElapsedMilliseconds} ms\n{msPerReplay} ms per replay");
     }
 
-    public static void ParseOsr(string osrPath, string outputPath)
+    public static void ParseOsr(string osrPath, string outputDir)
     {
         using FileStream fstream = new FileStream(osrPath, FileMode.Open, FileAccess.Read, FileShare.Read);
         Replay replay = ReplayDecoder.Decode(fstream);
@@ -72,7 +72,7 @@ internal class Program
             strBuilder.Append($"{frame.TimeDiff},{frame.X},{frame.Y},{xDiff},{yDiff},{GetKeyString(frame.StandardKeys)}\n");
         }
 
-        File.WriteAllText(outputPath, strBuilder.ToString());
+        File.WriteAllText(Path.Combine(outputDir, $"REPLAYDATA_{replay.ReplayMD5Hash}.txt"), strBuilder.ToString());
     }
 
     static string GetKeyString(StandardKeys keys)
