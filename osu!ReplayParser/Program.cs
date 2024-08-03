@@ -35,7 +35,8 @@ internal class Program
 
         if (string.IsNullOrEmpty(outputDir))
             outputDir = "out/";
-        else if (!Directory.Exists(outputDir))
+
+        if (!Directory.Exists(outputDir))
             Directory.CreateDirectory(outputDir);
 
         Stopwatch sw = new Stopwatch();
