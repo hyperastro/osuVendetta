@@ -3,12 +3,13 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, precision_score, recall_score, f1_score
 from torch.utils.data import Dataset, DataLoader, Subset
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence
 from tqdm import tqdm
-
+import joblib  
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"CUDA Available: {torch.cuda.is_available()}")
@@ -21,7 +22,6 @@ class OsuReplayDataset(Dataset):
         self.files = []
         self.labels = []
         self.max_length = max_length
-
         for label in os.listdir(data_dir):
             label_dir = os.path.join(data_dir, label)
             if os.path.isdir(label_dir):
@@ -32,21 +32,35 @@ class OsuReplayDataset(Dataset):
 
         if not self.files:
             raise ValueError("No data files found in the specified directory.")
-
         if label_encoder is None:
             self.label_encoder = LabelEncoder()
             self.labels = self.label_encoder.fit_transform(self.labels)
         else:
             self.label_encoder = label_encoder
             self.labels = self.label_encoder.transform(self.labels)
-
         if button_encoder is None:
             self.button_encoder = LabelEncoder()
+     
+            all_buttons = []
+            for file in self.files:
+                try:
+                    df = pd.read_csv(file, header=None, dtype={0: float, 1: float, 2: float, 3: float, 4: float, 5: str})
+                    all_buttons.extend(df[5].unique())
+                except Exception as e:
+                    print(f"Error reading file {file}: {e}")
+            self.button_encoder.fit(all_buttons)
         else:
             self.button_encoder = button_encoder
-
         self.scaler = StandardScaler()
         self._initialize_scaler()
+
+        joblib.dump(self.button_encoder, 'button_encoder.pkl')
+        print("Button encoder saved as 'button_encoder.pkl'")
+
+        # Save scaler mean and std
+        joblib.dump(self.scaler.mean_, 'scaler_mean.pkl')
+        joblib.dump(self.scaler.scale_, 'scaler_std.pkl')
+        print("Scaler mean and std saved as 'scaler_mean.pkl' and 'scaler_std.pkl'")
 
     def _initialize_scaler(self):
         sample_files = np.random.choice(self.files, min(100, len(self.files)), replace=False)
@@ -66,24 +80,20 @@ class OsuReplayDataset(Dataset):
     def __getitem__(self, idx):
         file = self.files[idx]
         label = self.labels[idx]
-
         try:
             df = pd.read_csv(file, header=None, dtype={0: float, 1: float, 2: float, 3: float, 4: float, 5: str})
-            df[5] = self.button_encoder.fit_transform(df[5])  
+            df[5] = self.button_encoder.transform(df[5])  
             df[[0, 1, 2]] = self.scaler.transform(df[[0, 1, 2]])  
             if len(df) > self.max_length:
                 df = df[:self.max_length]
-
             data = torch.tensor(df.values, dtype=torch.float32)
-
             if torch.isnan(data).any() or torch.isinf(data).any():
                 raise ValueError(f"NaN or infinite values found in file {file}")
-
         except Exception as e:
             print(f"Error reading file {file}: {e}")
             data = torch.zeros((self.max_length, 6), dtype=torch.float32)
-
         return data, label
+
 
 def collate_fn(batch):
     sequences, labels = zip(*batch)
@@ -92,25 +102,21 @@ def collate_fn(batch):
     return sequences_padded, labels
 
 
-data_dir = ''# put replay dir here
+data_dir = '/mnt/4b55a907-bb3f-43f9-ad49-8c8f30f6a000/ParsedReplays'
 dataset = OsuReplayDataset(data_dir)
 print(f"Loaded {len(dataset)} samples from {data_dir}")
-
 
 def stratified_split(dataset, test_size=0.2):
     df = pd.DataFrame({'files': dataset.files, 'labels': dataset.labels})
     train_df, test_df = train_test_split(df, test_size=test_size, stratify=df['labels'])
-
     train_dataset = Subset(dataset, train_df.index)
     test_dataset = Subset(dataset, test_df.index)
-
     return train_dataset, test_dataset
 
 train_dataset, test_dataset = stratified_split(dataset)
 
-train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=collate_fn, num_workers=16)# might have to change num_workers most cpus wont suport it
-test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False, collate_fn=collate_fn, num_workers=16)
-
+train_dataloader = DataLoader(train_dataset, batch_size=48, shuffle=True, collate_fn=collate_fn, num_workers=16)
+test_dataloader = DataLoader(test_dataset, batch_size=48, shuffle=False, collate_fn=collate_fn, num_workers=16)
 
 class BiLSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, num_layers=2):
@@ -119,8 +125,6 @@ class BiLSTMModel(nn.Module):
         self.num_layers = num_layers
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True)
         self.fc = nn.Linear(hidden_size * 2, output_size)
-
-      
         self._initialize_weights()
 
     def _initialize_weights(self):
@@ -138,28 +142,21 @@ class BiLSTMModel(nn.Module):
         return out
 
 input_size = 6
-hidden_size = 88
-output_size = len(os.listdir(data_dir))
+hidden_size = 56
+output_size = 2  
 num_layers = 4
-
-model = BiLSTMModel(input_size, hidden_size, output_size, num_layers).to(device)  
-
+model = BiLSTMModel(input_size, hidden_size, output_size, num_layers).to(device)
 print(f"Model is on device: {next(model.parameters()).device}")
 
-
-class_counts = [1370, 201787, 13644, 503, 1522]# change file ratios depending on number of files per category 
+class_counts = [13277, 13277] # change depending on number of files in your folders
 total_samples = sum(class_counts)
 class_weights = [total_samples / (len(class_counts) * count) for count in class_counts]
 class_weights = torch.tensor(class_weights, dtype=torch.float32).to(device)
-
 criterion = nn.CrossEntropyLoss(weight=class_weights)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5) 
-
-
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)  
 accumulation_steps = 2
-num_epochs = 200
+num_epochs = 7
 max_grad_norm = 0.5  
-
 train_losses = []
 test_losses = []
 
@@ -170,32 +167,26 @@ for epoch in range(num_epochs):
     running_loss = 0.0
     with tqdm(enumerate(train_dataloader), total=len(train_dataloader), desc=f'Epoch {epoch + 1}/{num_epochs}') as pbar:
         for i, (sequences, labels) in pbar:
-            sequences, labels = sequences.to(device), labels.to(device) 
-
+            sequences, labels = sequences.to(device), labels.to(device)  
             outputs = model(sequences)
             loss = criterion(outputs, labels)
-
-            loss = loss / accumulation_steps  
+            loss = loss / accumulation_steps 
             loss.backward()
 
-        
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
-
             if (i + 1) % accumulation_steps == 0:
                 optimizer.step()
                 optimizer.zero_grad()
-
             running_loss += loss.item()
-
             pbar.set_postfix({'Loss': running_loss / (i + 1)})
 
     epoch_loss = running_loss / len(train_dataloader)
     train_losses.append(epoch_loss)
     print(f'Epoch [{epoch + 1}/{num_epochs}], Train Loss: {epoch_loss:.4f}')
-
-    
     model.eval()
     test_loss = 0.0
+    all_labels = []
+    all_preds = []
     with torch.no_grad():
         for sequences, labels in test_dataloader:
             sequences, labels = sequences.to(device), labels.to(device)  
@@ -203,11 +194,21 @@ for epoch in range(num_epochs):
             outputs = model(sequences)
             loss = criterion(outputs, labels)
             test_loss += loss.item()
+            _, preds = torch.max(outputs, 1)
+            all_labels.extend(labels.cpu().numpy())
+            all_preds.extend(preds.cpu().numpy())
 
     test_loss /= len(test_dataloader)
     test_losses.append(test_loss)
     print(f'Epoch [{epoch + 1}/{num_epochs}], Test Loss: {test_loss:.4f}')
 
+    test_f1 = f1_score(all_labels, all_preds, average='weighted')
+    test_precision = precision_score(all_labels, all_preds, average='weighted')
+    test_recall = recall_score(all_labels, all_preds, average='weighted')
+
+    print(f'Epoch [{epoch + 1}/{num_epochs}], Test F1: {test_f1:.4f}, Test Precision: {test_precision:.4f}, Test Recall: {test_recall:.4f}')
+    torch.save(model.state_dict(), 'osu_anti_cheat_model' + str((epoch + 1)) + '.pth')
+    print(classification_report(all_labels, all_preds, target_names=['normal', 'relax']))
 
     with torch.no_grad():
         total_norm = 0
@@ -217,8 +218,6 @@ for epoch in range(num_epochs):
                 total_norm += param_norm.item() ** 2
         total_norm = total_norm ** (1. / 2)
         print(f'Epoch [{epoch + 1}/{num_epochs}], Gradient Norm: {total_norm:.4f}')
-
-   
     if epoch > 1 and test_losses[-1] > test_losses[-2]:
         print("Warning: Test loss increased. Potential overfitting detected.")
-torch.save(model.state_dict(), 'osu_anti_cheat_model.pth')
+torch.save(model.state_dict(), 'osu_anti_cheat_modelFINAL.pth')
