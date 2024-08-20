@@ -1,0 +1,181 @@
+﻿@page "/anticheat"
+@using osuvendetta.Core.AntiCheat
+@using osuvendetta.Core.AntiCheat.Data
+@using osuvendetta.Web.Client.AntiCheat
+@using OsuParsers.Decoders
+@using OsuParsers.Enums
+@using OsuParsers.Enums.Replays
+@using OsuParsers.Replays
+@using OsuParsers.Replays.Objects
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject IAntiCheatService AntiCheatService
+@inject ISnackbar Snackbar
+
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<PageTitle>Anticheat</PageTitle>
+
+<MudStack Style="width: 100%">
+    <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                   @ref="@FileUpload"
+                   Context="FileUpload"
+                   OnFilesChanged="OnInputFileChanged"
+                   AppendMultipleFiles
+                   Hidden="@false"
+                   InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                   InputStyle="opacity:0"
+                   tabindex="-1"
+                   @ondrop="@ClearUploadDragClass"
+                   @ondragenter="@SetUploadDragClass"
+                   @ondragleave="@ClearUploadDragClass"
+                   @ondragend="@ClearUploadDragClass">
+        <ActivatorContent>
+            <MudPaper Height="300px"
+                      Outlined="true"
+                      Class="@DragClass">
+                <MudText Typo="Typo.h6">
+                    Drag and drop files here or click
+                </MudText>
+                @foreach (string file in FileNames)
+                {
+                    <MudChip T="string"
+                             Color="Color.Dark"
+                             Text="@file"
+                             tabindex="-1" />
+                }
+            </MudPaper>
+        </ActivatorContent>
+    </MudFileUpload>
+    <MudToolBar Gutters="@false"
+                Class="relative d-flex justify-end gap-4">
+        <MudButton Color="Color.Primary"
+                   OnClick="@OpenFilePickerAsync"
+                   Variant="Variant.Filled">
+            Open file picker
+        </MudButton>
+        <MudButton Color="Color.Primary"
+                   Disabled="@(!FileNames.Any())"
+                   OnClick="@UploadAsync"
+                   Variant="Variant.Filled">
+            Upload
+        </MudButton>
+        <MudButton Color="Color.Error"
+                   Disabled="@(!FileNames.Any())"
+                   OnClick="@ClearUploadAsync"
+                   Variant="Variant.Filled">
+            Clear
+        </MudButton>
+    </MudToolBar>
+</MudStack>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+<script src="/onnx/onnxHelper.js"></script>
+
+@code {
+    const string _DEFAULT_DRAG_CLASS = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
+
+    public MudFileUpload<IReadOnlyList<IBrowserFile>>? FileUpload;
+    public List<string> FileNames = new List<string>();
+    public string DragClass = _DEFAULT_DRAG_CLASS;
+
+    List<IBrowserFile> _filesToUpload = new List<IBrowserFile>();
+
+    readonly string _modelPath = @"/api/File?file=56x4Model.onnx";
+
+    public async Task ClearUploadAsync()
+    {
+        if (FileUpload is not null)
+        {
+            await FileUpload.ClearAsync();
+            FileNames.Clear();
+            _filesToUpload.Clear();
+        }
+
+        ClearUploadDragClass();
+    }
+
+    public async Task OpenFilePickerAsync()
+    {
+        if (FileUpload is not null)
+            await FileUpload.OpenFilePickerAsync();
+    }
+
+    public void OnInputFileChanged(InputFileChangeEventArgs e)
+    {
+        if (FileUpload is null)
+            return;
+
+        ClearUploadDragClass();
+
+        var files = e.GetMultipleFiles();
+        foreach (var file in files)
+        {
+            FileNames.Add(file.Name);
+            _filesToUpload.Add(file);
+        }
+    }
+
+    public async Task UploadAsync()
+    {
+        if (_filesToUpload.Count == 0)
+            return;
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+
+        for (int i = 0; i < _filesToUpload.Count; i++)
+        {
+            IBrowserFile file = _filesToUpload[i];
+
+            using Stream fileStream = file.OpenReadStream();
+            using MemoryStream replayStream = new MemoryStream();
+            await fileStream.CopyToAsync(replayStream, (int)file.Size);
+
+            replayStream.Seek(i, SeekOrigin.Begin);
+
+            AntiCheatResult? result = await ProcessReplay(replayStream);
+
+            if (result is null)
+            {
+                Snackbar.Add($"Invalid replay: {file.Name}");
+                Console.WriteLine($"Invalid replay: {file.Name}");
+                continue;
+            }
+
+            Snackbar.Add($"Replay {file.Name} result: {result.Type.ToString()}");
+
+            Console.WriteLine(result.Type);
+            Console.WriteLine(result.ErrorMessage ?? "No Error");
+        }
+
+        await ClearUploadAsync();
+    }
+
+    async Task<AntiCheatResult?> ProcessReplay(Stream replayStream)
+    {
+        Replay replay = ReplayDecoder.Decode(replayStream);
+        string? replayValidation = AntiCheatService.ValidateReplay(replay);
+
+        if (!string.IsNullOrEmpty(replayValidation))
+            return null;
+
+        float[] replayTokens = AntiCheatService.ProcessReplayTokens(replay.ReplayFrames);
+        long[] dimensions = AntiCheatService.CreateModelDimensionsFor(replayTokens);
+
+        RunModelArgs modelArgs = new RunModelArgs(new ModelProviderArgs(_modelPath, "onnxInterop.run"),
+            new InputArgs(replayTokens, dimensions));
+
+        return await AntiCheatService.RunModelAsync(modelArgs);
+    }
+
+    void SetUploadDragClass()
+    {
+        DragClass = $"{_DEFAULT_DRAG_CLASS} mud-border-primary";
+    }
+
+    void ClearUploadDragClass()
+    {
+        DragClass = _DEFAULT_DRAG_CLASS;
+    }
+}
