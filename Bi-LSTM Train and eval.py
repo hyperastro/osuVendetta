@@ -125,7 +125,7 @@ def collate_fn(batch):
     return sequences_padded, labels
 
 
-data_dir = '/mnt/4b55a907-bb3f-43f9-ad49-8c8f30f6a000/ParsedReplays'
+data_dir = ''
 dataset = OsuReplayDataset(data_dir)
 print(f"Loaded {len(dataset)} samples from {data_dir}")
 
