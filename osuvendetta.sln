@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34616.47
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "osuvendetta.Web", "osuvendetta.Web\osuvendetta.Web.csproj", "{0B2D5A40-BE4D-49BC-83D3-7E5567C868F1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "osuVendetta.Web", "osuVendetta.Web\osuVendetta.Web.csproj", "{0B2D5A40-BE4D-49BC-83D3-7E5567C868F1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "osuvendetta.Web.Client", "osuvendetta.Web.Client\osuvendetta.Web.Client.csproj", "{EC62589A-00FB-4AAC-B7A1-3645C73305C3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "osuVendetta.Web.Client", "osuVendetta.Web.Client\osuVendetta.Web.Client.csproj", "{EC62589A-00FB-4AAC-B7A1-3645C73305C3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "osuvendetta.Core", "osuVendetta.Core\osuvendetta.Core.csproj", "{B4741442-829D-4F89-B75C-4FFD18CB78D3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "osuVendetta.Core", "osuVendetta.Core\osuVendetta.Core.csproj", "{B4741442-829D-4F89-B75C-4FFD18CB78D3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

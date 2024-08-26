@@ -1,8 +1,8 @@
 ﻿using Microsoft.JSInterop;
-using osuvendetta.Core.AntiCheat;
-using osuvendetta.Core.AntiCheat.Data;
+using osuVendetta.Core.AntiCheat;
+using osuVendetta.Core.AntiCheat.Data;
 
-namespace osuvendetta.Web.Client.AntiCheat
+namespace osuVendetta.Web.Client.AntiCheat
 {
     public class AntiCheatModel : IAntiCheatModel
     {

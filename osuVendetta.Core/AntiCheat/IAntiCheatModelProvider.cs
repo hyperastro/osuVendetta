@@ -1,4 +1,4 @@
-﻿namespace osuvendetta.Core.AntiCheat;
+﻿namespace osuVendetta.Core.AntiCheat;
 
 public abstract record class AntiCheatModelProviderArgs();
 

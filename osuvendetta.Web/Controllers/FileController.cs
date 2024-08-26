@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace osuvendetta.Web.Controllers;
+namespace osuVendetta.Web.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

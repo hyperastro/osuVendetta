@@ -1,6 +1,6 @@
-﻿using osuvendetta.Core.AntiCheat.Data;
+﻿using osuVendetta.Core.AntiCheat.Data;
 
-namespace osuvendetta.Core.AntiCheat;
+namespace osuVendetta.Core.AntiCheat;
 
 public record class InputArgs(
     float[] InputData,

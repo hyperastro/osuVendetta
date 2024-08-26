@@ -1,8 +1,8 @@
 using Blazr.RenderState.Server;
 using MudBlazor.Services;
-using osuvendetta.Web.Components;
+using osuVendetta.Web.Components;
 
-namespace osuvendetta.Web;
+namespace osuVendetta.Web;
 
 public class Program
 {

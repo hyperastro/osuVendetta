@@ -1,4 +1,4 @@
-﻿namespace osuvendetta.Core.AntiCheat.Data;
+﻿namespace osuVendetta.Core.AntiCheat.Data;
 
 public enum AntiCheatResultType
 {

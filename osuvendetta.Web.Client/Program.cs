@@ -1,10 +1,10 @@
 using Blazr.RenderState.WASM;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
-using osuvendetta.Web.Client.AntiCheat;
-using osuvendetta.Core.AntiCheat;
+using osuVendetta.Web.Client.AntiCheat;
+using osuVendetta.Core.AntiCheat;
 
-namespace osuvendetta.Web.Client;
+namespace osuVendetta.Web.Client;
 
 internal class Program
 {

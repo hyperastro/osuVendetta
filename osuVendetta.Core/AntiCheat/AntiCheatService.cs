@@ -2,9 +2,9 @@
 using OsuParsers.Enums.Replays;
 using OsuParsers.Replays;
 using OsuParsers.Replays.Objects;
-using osuvendetta.Core.AntiCheat.Data;
+using osuVendetta.Core.AntiCheat.Data;
 
-namespace osuvendetta.Core.AntiCheat;
+namespace osuVendetta.Core.AntiCheat;
 
 public record class RunModelArgs(
     AntiCheatModelProviderArgs ModelProviderArgs,

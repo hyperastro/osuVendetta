@@ -1,7 +1,7 @@
 ﻿using Microsoft.JSInterop;
-using osuvendetta.Core.AntiCheat;
+using osuVendetta.Core.AntiCheat;
 
-namespace osuvendetta.Web.Client.AntiCheat;
+namespace osuVendetta.Web.Client.AntiCheat;
 
 public record class ModelProviderArgs(
     string PathToModel,
