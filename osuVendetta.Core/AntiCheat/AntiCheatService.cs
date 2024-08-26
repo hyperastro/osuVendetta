@@ -13,7 +13,10 @@ public record class RunModelArgs(
     InputArgs InputArgs
 );
 
-public record struct MaxValueIndex(int MaxIndex, float MaxValue);
+public record struct MaxValueIndex(
+    int MaxIndex, 
+    float MaxValue
+);
 
 public interface IAntiCheatService
 {

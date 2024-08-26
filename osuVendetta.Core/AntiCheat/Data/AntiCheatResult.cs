@@ -1,6 +1,8 @@
 ﻿namespace osuVendetta.Core.AntiCheat.Data;
 
-public record class AntiCheatResult(AntiCheatResultType Type, string? Message = null)
+public record class AntiCheatResult(
+    AntiCheatResultType Type, 
+    string? Message = null)
 {
     public static AntiCheatResult Normal()
         => Normal(null);

@@ -1,4 +1,5 @@
 ﻿@page "/anticheat"
+@using System.Diagnostics
 @using osuVendetta.Core.AntiCheat
 @using osuVendetta.Core.AntiCheat.Data
 @using osuVendetta.Web.Client.AntiCheat
@@ -19,6 +20,7 @@
 
 <MudStack Style="width: 100%">
     <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                   @ref="FileUpload"
                    OnFilesChanged="OnInputFileChanged"
                    AppendMultipleFiles
                    Hidden="@false"
@@ -42,17 +44,18 @@
                              Color="Color.Dark"
                              Text="@file"
                              tabindex="-1" />
+                             <br />
                 }
             </MudPaper>
         </ActivatorContent>
     </MudFileUpload>
     <MudToolBar Gutters="@false"
                 Class="relative d-flex justify-end gap-4">
-        <MudButton Color="Color.Primary"
+        @* <MudButton Color="Color.Primary"
                    OnClick="@OpenFilePickerAsync"
                    Variant="Variant.Filled">
             Open file picker
-        </MudButton>
+        </MudButton> *@
         <MudButton Color="Color.Primary"
                    Disabled="@(!FileNames.Any())"
                    OnClick="@UploadAsync"
@@ -76,52 +79,45 @@
     const string ONNX_JS_INTEROP_FUNC = "onnxInterop.run";
     const string ONNX_MODEL_PATH = @"/api/File?file=56x4Model.onnx";
 
-    public MudFileUpload<IReadOnlyList<IBrowserFile>>? FileUpload;
+    // FileUpload is set in html
+    public MudFileUpload<IReadOnlyList<IBrowserFile>> FileUpload;
     public List<string> FileNames = new List<string>();
     public string DragClass = DEFAULT_DRAG_CLASS;
 
-    // for some reason FileUpload.Files doesn't store any files so we need to manually do this
     List<IBrowserFile> _filesToUpload = new List<IBrowserFile>();
-
 
     public async Task ClearUploadAsync()
     {
-        if (FileUpload is not null)
-        {
-            await FileUpload.ClearAsync();
-            FileNames.Clear();
-            _filesToUpload.Clear();
-        }
-
         ClearUploadDragClass();
+
+        await FileUpload.ClearAsync();
+
+        FileNames.Clear();
+        _filesToUpload.Clear();
     }
 
     public async Task OpenFilePickerAsync()
     {
-        if (FileUpload is not null)
-            await FileUpload.OpenFilePickerAsync();
+        await FileUpload.OpenFilePickerAsync();
     }
 
     public void OnInputFileChanged(InputFileChangeEventArgs e)
     {
-        if (FileUpload is null)
-            return;
-
         ClearUploadDragClass();
 
-        var files = e.GetMultipleFiles();
-        foreach (var file in files)
+        _filesToUpload.Clear();
+        FileNames.Clear();
+
+        IReadOnlyList<IBrowserFile> files = e.GetMultipleFiles();
+        foreach (IBrowserFile file in files)
         {
-            FileNames.Add(file.Name);
             _filesToUpload.Add(file);
+            FileNames.Add(file.Name);
         }
     }
 
     public async Task UploadAsync()
     {
-        if (_filesToUpload.Count == 0)
-            return;
-
         Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
 
         for (int i = 0; i < _filesToUpload.Count; i++)
@@ -132,18 +128,25 @@
             using MemoryStream replayStream = new MemoryStream();
             await fileStream.CopyToAsync(replayStream, (int)file.Size);
 
-            replayStream.Seek(i, SeekOrigin.Begin);
+            replayStream.Seek(0, SeekOrigin.Begin);
 
-            AntiCheatResult? result = await AntiCheatService.ProcessReplayAsync(replayStream,
-                new ModelProviderArgs(ONNX_MODEL_PATH, ONNX_JS_INTEROP_FUNC));
-
-            if (result is null)
+            try
             {
-                Snackbar.Add($"Invalid replay: {file.Name}");
-                continue;
-            }
+                AntiCheatResult? result = await AntiCheatService.ProcessReplayAsync(replayStream,
+                    new ModelProviderArgs(ONNX_MODEL_PATH, ONNX_JS_INTEROP_FUNC));
 
-            Snackbar.Add($"Replay {file.Name} result: {result.Type.ToString()}");
+                if (result is null)
+                {
+                    Snackbar.Add($"Invalid replay: {file.Name}");
+                    continue;
+                }
+
+                Snackbar.Add($"Replay {file.Name}:\n{result.Type}");
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"An exception occured:\n{ex}");
+            }
         }
 
         await ClearUploadAsync();
