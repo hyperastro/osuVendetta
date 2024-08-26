@@ -27,13 +27,13 @@ namespace osuVendetta.Web.Client.AntiCheat
             switch (maxValueIndex.MaxIndex)
             {
                 case 0:
-                    return new AntiCheatResult(AntiCheatResultType.Relax);
+                    return AntiCheatResult.Relax();
 
                 case 1:
-                    return new AntiCheatResult(AntiCheatResultType.Normal);
+                    return AntiCheatResult.Normal();
 
                 default:
-                    return new AntiCheatResult(AntiCheatResultType.Invalid, $"Unkown result classname index: {maxValueIndex.MaxIndex}");
+                    return AntiCheatResult.Invalid($"Unkown result classname index: {maxValueIndex.MaxIndex}");
             }
         }
 

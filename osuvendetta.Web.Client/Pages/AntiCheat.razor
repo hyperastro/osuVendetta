@@ -19,8 +19,6 @@
 
 <MudStack Style="width: 100%">
     <MudFileUpload T="IReadOnlyList<IBrowserFile>"
-                   @ref="@FileUpload"
-                   Context="FileUpload"
                    OnFilesChanged="OnInputFileChanged"
                    AppendMultipleFiles
                    Hidden="@false"
@@ -74,15 +72,17 @@
 <script src="/onnx/onnxHelper.js"></script>
 
 @code {
-    const string _DEFAULT_DRAG_CLASS = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
+    const string DEFAULT_DRAG_CLASS = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
+    const string ONNX_JS_INTEROP_FUNC = "onnxInterop.run";
+    const string ONNX_MODEL_PATH = @"/api/File?file=56x4Model.onnx";
 
     public MudFileUpload<IReadOnlyList<IBrowserFile>>? FileUpload;
     public List<string> FileNames = new List<string>();
-    public string DragClass = _DEFAULT_DRAG_CLASS;
+    public string DragClass = DEFAULT_DRAG_CLASS;
 
+    // for some reason FileUpload.Files doesn't store any files so we need to manually do this
     List<IBrowserFile> _filesToUpload = new List<IBrowserFile>();
 
-    readonly string _modelPath = @"/api/File?file=56x4Model.onnx";
 
     public async Task ClearUploadAsync()
     {
@@ -134,48 +134,28 @@
 
             replayStream.Seek(i, SeekOrigin.Begin);
 
-            AntiCheatResult? result = await ProcessReplay(replayStream);
+            AntiCheatResult? result = await AntiCheatService.ProcessReplayAsync(replayStream,
+                new ModelProviderArgs(ONNX_MODEL_PATH, ONNX_JS_INTEROP_FUNC));
 
             if (result is null)
             {
                 Snackbar.Add($"Invalid replay: {file.Name}");
-                Console.WriteLine($"Invalid replay: {file.Name}");
                 continue;
             }
 
             Snackbar.Add($"Replay {file.Name} result: {result.Type.ToString()}");
-
-            Console.WriteLine(result.Type);
-            Console.WriteLine(result.ErrorMessage ?? "No Error");
         }
 
         await ClearUploadAsync();
     }
 
-    async Task<AntiCheatResult?> ProcessReplay(Stream replayStream)
-    {
-        Replay replay = ReplayDecoder.Decode(replayStream);
-        string? replayValidation = AntiCheatService.ValidateReplay(replay);
-
-        if (!string.IsNullOrEmpty(replayValidation))
-            return null;
-
-        float[] replayTokens = AntiCheatService.ProcessReplayTokens(replay.ReplayFrames);
-        long[] dimensions = AntiCheatService.CreateModelDimensionsFor(replayTokens);
-
-        RunModelArgs modelArgs = new RunModelArgs(new ModelProviderArgs(_modelPath, "onnxInterop.run"),
-            new InputArgs(replayTokens, dimensions));
-
-        return await AntiCheatService.RunModelAsync(modelArgs);
-    }
-
     void SetUploadDragClass()
     {
-        DragClass = $"{_DEFAULT_DRAG_CLASS} mud-border-primary";
+        DragClass = $"{DEFAULT_DRAG_CLASS} mud-border-primary";
     }
 
     void ClearUploadDragClass()
     {
-        DragClass = _DEFAULT_DRAG_CLASS;
+        DragClass = DEFAULT_DRAG_CLASS;
     }
 }

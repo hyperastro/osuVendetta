@@ -1,8 +1,10 @@
-﻿using OsuParsers.Enums;
+﻿using OsuParsers.Decoders;
+using OsuParsers.Enums;
 using OsuParsers.Enums.Replays;
 using OsuParsers.Replays;
 using OsuParsers.Replays.Objects;
 using osuVendetta.Core.AntiCheat.Data;
+using System.Net.Http.Headers;
 
 namespace osuVendetta.Core.AntiCheat;
 
@@ -15,6 +17,8 @@ public record struct MaxValueIndex(int MaxIndex, float MaxValue);
 
 public interface IAntiCheatService
 {
+    Task<AntiCheatResult> ProcessReplayAsync(Stream replayStream, AntiCheatModelProviderArgs modelProviderArgs);
+    Task<AntiCheatResult> ProcessReplayAsync(Replay replay, AntiCheatModelProviderArgs modelProviderArgs);
     Task<AntiCheatResult> RunModelAsync(RunModelArgs args);
     string? ValidateReplay(Replay replay);
     float[] ProcessReplayTokens(List<ReplayFrame> frames);
@@ -32,6 +36,28 @@ public sealed class AntiCheatService : IAntiCheatService
     public AntiCheatService(IAntiCheatModelProvider modelProvider)
     {
         _modelProvider = modelProvider;
+    }
+
+    public async Task<AntiCheatResult> ProcessReplayAsync(Stream replayStream, AntiCheatModelProviderArgs modelProviderArgs)
+    {
+        Replay replay = ReplayDecoder.Decode(replayStream);
+
+        return await ProcessReplayAsync(replay, modelProviderArgs);
+    }
+
+    public async Task<AntiCheatResult> ProcessReplayAsync(Replay replay, AntiCheatModelProviderArgs modelProviderArgs)
+    {
+        string? replayValidation = ValidateReplay(replay);
+
+        if (!string.IsNullOrEmpty(replayValidation))
+            return AntiCheatResult.Invalid(replayValidation);
+
+        float[] replayTokens = ProcessReplayTokens(replay.ReplayFrames);
+        long[] dimensions = CreateModelDimensionsFor(replayTokens);
+
+        RunModelArgs modelArgs = new RunModelArgs(modelProviderArgs, new InputArgs(replayTokens, dimensions));
+
+        return await RunModelAsync(modelArgs);
     }
 
     public long[] CreateModelDimensionsFor(float[] input)
