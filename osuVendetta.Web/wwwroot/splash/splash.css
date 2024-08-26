@@ -1,0 +1,30 @@
+﻿.splash-container {
+    position: fixed;
+
+    display: flex;
+    flex-direction: column;
+    /*align-content:center;*/
+    /*justify-content: center;*/
+    background-color: rgba(55, 55, 55, 0.75);
+    color: white;
+
+    height: 100vh;
+    width: 100vw;
+
+    z-index: 100;
+    padding-top: 5%;
+}
+
+.splash-text {
+    font-size: 2rem;
+    align-self: center;
+}
+
+.splash-text-sub {
+    align-self: center;
+}
+
+.splash-text-debug {
+    align-self: center;
+    color: red;
+}

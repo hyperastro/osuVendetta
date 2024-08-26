@@ -1,5 +1,51 @@
 ﻿@rendermode InteractiveWebAssembly
-@* 
-<div class="alert alert-primary m-5">
-    BIG SPLASH
-</div> *@
+@inject IJSRuntime JSRuntime
+
+<link href="/splash/splash.css" rel="stylesheet" />
+
+@* When I tested this inside 'server/wwwroot/splash/splash.js'
+   then 'await JSRuntime.InvokeVoidAsync("hideSplashScreen");' resulted in not found
+   need to investigate this
+*@
+<script>
+    function hideSplashScreen() {
+        var splashScreen = document.getElementById('splash-screen');
+
+        if (splashScreen == null)
+            return;
+
+        splashScreen.hidden = true;
+    }
+</script>
+
+<div id="splash-screen" class="splash-container">
+    <span class="splash-text">
+        Please wait while we are loading the required files.
+    </span>
+    <span class="splash-text-sub">
+        (This might take a few seconds depending on your network connection)
+    </span>
+    @if (IsDebugMode)
+    {
+        <span class="splash-text-debug">
+            (DEBUG MODE: loading will take longer than in release!)
+        </span>
+    }
+</div>
+
+@code {
+    public bool IsDebugMode
+#if DEBUG
+        => true;
+#else
+        => false;
+#endif
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await JSRuntime.InvokeVoidAsync("hideSplashScreen");
+    }
+}

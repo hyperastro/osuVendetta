@@ -1,5 +1,18 @@
-﻿<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="new[] { typeof(Client._Imports).Assembly }">
+﻿@using Blazr.RenderState
+@using System.Runtime.InteropServices
+@using osuVendetta.Web.Client.Pages
+@inject NavigationManager NavigationManager
+@inject IBlazrRenderStateService RenderState
+
+
+<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="new[] { typeof(Client._Imports).Assembly }">
     <Found Context="routeData">
+        @if (RenderState.IsPreRender &&
+        routeData.PageType.Assembly.Equals(typeof(osuVendetta.Web.Client.AntiCheat.AntiCheatModel).Assembly))
+        {
+            <Splash />
+        }
+
         <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
