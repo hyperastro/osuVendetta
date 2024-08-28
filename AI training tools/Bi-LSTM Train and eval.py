@@ -19,22 +19,25 @@ print(f"CUDA Available: {torch.cuda.is_available()}")
 print(f"CUDA Device: {torch.cuda.current_device()}")
 print(f"CUDA Device Name: {torch.cuda.get_device_name(0)}")
 
-
 class OsuReplayDataset(Dataset):
-    def __init__(self, data_dir, label_encoder=None, button_encoder=None, segment_size=1000, overlap=500):
+    def __init__(self, data_dir, label_encoder=None, button_encoder=None, segment_size=1000, is_test=False):
         self.data_dir = data_dir
         self.files = []
         self.labels = []
         self.segment_size = segment_size
-        self.overlap = overlap
+        self.is_test = is_test
 
-        for label in os.listdir(data_dir):
-            label_dir = os.path.join(data_dir, label)
-            if os.path.isdir(label_dir):
-                for file in os.listdir(label_dir):
-                    if file.endswith('.txt'):
-                        self.files.append(os.path.join(label_dir, file))
-                        self.labels.append(label)
+        if not is_test:
+            for label in os.listdir(data_dir):
+                label_dir = os.path.join(data_dir, label)
+                if os.path.isdir(label_dir):
+                    for file in os.listdir(label_dir):
+                        if file.endswith('.txt'):
+                            self.files.append(os.path.join(label_dir, file))
+                            self.labels.append(label)
+        else:
+            self.files.append(data_dir)
+            self.labels.append(os.path.basename(data_dir).split('_')[0])
 
         if not self.files:
             raise ValueError("No data files found in the specified directory.")
@@ -62,14 +65,6 @@ class OsuReplayDataset(Dataset):
 
         self.scaler = StandardScaler()
         self._initialize_scaler()
-
-        joblib.dump(self.button_encoder, 'button_encoder.pkl')
-        print("Button encoder saved as 'button_encoder.pkl'")
-
-
-        joblib.dump(self.scaler.mean_, 'scaler_mean.pkl')
-        joblib.dump(self.scaler.scale_, 'scaler_std.pkl')
-        print("Scaler mean and std saved as 'scaler_mean.pkl' and 'scaler_std.pkl'")
 
     def _initialize_scaler(self):
         sample_files = np.random.choice(self.files, min(1000, len(self.files)), replace=False)
@@ -118,17 +113,12 @@ class OsuReplayDataset(Dataset):
 
 
 
+
 def collate_fn(batch):
     sequences, labels = zip(*batch)
     sequences_padded = pad_sequence(sequences, batch_first=True, padding_value=0)
     labels = torch.tensor(labels, dtype=torch.long)
     return sequences_padded, labels
-
-
-data_dir = ''
-dataset = OsuReplayDataset(data_dir)
-print(f"Loaded {len(dataset)} samples from {data_dir}")
-
 
 def stratified_split(dataset, test_size=0.2):
     df = pd.DataFrame({'files': dataset.files, 'labels': dataset.labels})
@@ -137,10 +127,13 @@ def stratified_split(dataset, test_size=0.2):
     test_dataset = Subset(dataset, test_df.index)
     return train_dataset, test_dataset
 
+data_dir = '/mnt/4b55a907-bb3f-43f9-ad49-8c8f30f6a000/ParsedReplays'
+dataset = OsuReplayDataset(data_dir)
+print(f"Loaded {len(dataset)} samples from {data_dir}")
 
 train_dataset, test_dataset = stratified_split(dataset)
-train_dataloader = DataLoader(train_dataset, batch_size=192, shuffle=True, collate_fn=collate_fn, num_workers=16)
-test_dataloader = DataLoader(test_dataset, batch_size=192, shuffle=False, collate_fn=collate_fn, num_workers=16)
+train_dataloader = DataLoader(train_dataset, batch_size=180, shuffle=True, collate_fn=collate_fn, num_workers=16)
+test_dataloader = DataLoader(test_dataset, batch_size=180, shuffle=False, collate_fn=collate_fn, num_workers=16)
 
 class BiLSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, num_layers=2, dropout=0.5):
@@ -168,30 +161,34 @@ class BiLSTMModel(nn.Module):
         return out
 
 input_size = 6
-hidden_size = 128
+hidden_size = 192
 output_size = 2
 num_layers = 2
 model = BiLSTMModel(input_size, hidden_size, output_size, num_layers).to(device)
 print(f"Model is on device: {next(model.parameters()).device}")
 
-class_counts = [13277, 13277]  #be carefull the classes arent listested alphabetically use os.listdir to figure out which one is which
+
+class_counts = [13277, 13277]  #be carefull if you are training with diffrent num of files you have to ajust the num of files present in each class
 total_samples = sum(class_counts)
 class_weights = [total_samples / (len(class_counts) * count) for count in class_counts]
-class_weights = torch.tensor(class_weights, dtype=torch.float32).to(device)
-criterion = nn.CrossEntropyLoss(weight=class_weights)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=1e-4)
-accumulation_steps = 2
-scheduler = lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.5)
+class_weights = torch.tensor(class_weights).to(device)
 
-num_epochs = 14
+criterion = nn.CrossEntropyLoss(weight=class_weights)
+optimizer = torch.optim.AdamW(model.parameters(), lr=0.005,weight_decay=1e-4)
+scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+
+
+num_epochs = 30
 max_grad_norm = 1.0
+accumulation_steps = 2
 train_losses = []
 test_losses = []
 
 for epoch in range(num_epochs):
     model.train()
     running_loss = 0.0
-    with tqdm(enumerate(train_dataloader), total=len(train_dataloader), desc=f'Epoch {epoch + 1}/{num_epochs}') as pbar:
+    optimizer.zero_grad()
+    with tqdm(enumerate(train_dataloader), total=len(train_dataloader), desc=f"Epoch {epoch+1}/{num_epochs}") as pbar:
         for i, (sequences, labels) in pbar:
             sequences, labels = sequences.to(device), labels.to(device)
             outputs = model(sequences)
@@ -199,19 +196,15 @@ for epoch in range(num_epochs):
             loss = loss / accumulation_steps
             loss.backward()
 
-            running_loss += loss.item() * accumulation_steps
-
             if (i + 1) % accumulation_steps == 0:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+                nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
                 optimizer.step()
                 optimizer.zero_grad()
+            running_loss += loss.item() * accumulation_steps
+            pbar.set_postfix({'loss': running_loss / ((i + 1) * accumulation_steps)})
 
-            pbar.set_postfix({'Loss': running_loss / (i + 1)})
-
-    epoch_loss = running_loss / len(train_dataloader)
-    train_losses.append(epoch_loss)
-    print(f'Epoch [{epoch + 1}/{num_epochs}], Train Loss: {epoch_loss:.4f}')
-    scheduler.step()
+    train_losses.append(running_loss / len(train_dataloader))
+    print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {running_loss / len(train_dataloader):.4f}")
     model.eval()
     test_loss = 0.0
     all_labels = []
@@ -222,37 +215,40 @@ for epoch in range(num_epochs):
             outputs = model(sequences)
             loss = criterion(outputs, labels)
             test_loss += loss.item()
-            _, preds = torch.max(outputs, 1)
-            all_labels.extend(labels.cpu().numpy())
-            all_preds.extend(preds.cpu().numpy())
 
-    test_loss /= len(test_dataloader)
-    test_losses.append(test_loss)
-    print(f'Epoch [{epoch + 1}/{num_epochs}], Test Loss: {test_loss:.4f}')
-    test_f1 = f1_score(all_labels, all_preds, average='weighted')
-    test_precision = precision_score(all_labels, all_preds, average='weighted')
-    test_recall = recall_score(all_labels, all_preds, average='weighted')
-    print(f'Epoch [{epoch + 1}/{num_epochs}], Test F1: {test_f1:.4f}, Test Precision: {test_precision:.4f}, Test Recall: {test_recall:.4f}')
-    print(classification_report(all_labels, all_preds, target_names=['normal', 'relax']))
+            _, predicted = torch.max(outputs.data, 1)
+            all_labels.extend(labels.cpu().numpy())
+            all_preds.extend(predicted.cpu().numpy())
+    test_losses.append(test_loss / len(test_dataloader))
+    print(f"Epoch [{epoch+1}/{num_epochs}], Test Loss: {test_loss / len(test_dataloader):.4f}")
+
+    precision = precision_score(all_labels, all_preds, average='weighted')
+    recall = recall_score(all_labels, all_preds, average='weighted')
+    f1 = f1_score(all_labels, all_preds, average='weighted')
+    print(f'Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1:.4f}')
     cm = confusion_matrix(all_labels, all_preds)
     plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=['normal', 'relax'], yticklabels=['normal', 'relax'])
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=list(range(output_size)),
+                yticklabels=list(range(output_size)))
     plt.xlabel('Predicted')
-    plt.ylabel('Actual')
+    plt.ylabel('True')
     plt.title('Confusion Matrix')
     plt.savefig(f'confusion_matrix_epoch_{epoch + 1}.png')
     plt.close()
+    scheduler.step()
+torch.save(model.state_dict(), 'bilstm_model.pth')
+print("Model saved as 'bilstm_model.pth'")
+dummy_input = torch.randn(1, 1000, input_size).to(device)
+onnx_path = 'osu_anti_cheat_modelFINAL.onnx'
+torch.onnx.export(model, dummy_input, onnx_path, verbose=True, input_names=['input'], output_names=['output'])
+print(f"Model has been exported to ONNX format at {onnx_path}")
+plt.figure(figsize=(10, 5))
+plt.plot(train_losses, label='Train Loss')
+plt.plot(test_losses, label='Test Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.title('Train and Test Loss over Epochs')
+plt.savefig('loss_curves.png')
+plt.close()
 
-    with torch.no_grad():
-        total_norm = 0
-        for p in model.parameters():
-            if p.grad is not None:
-                param_norm = p.grad.data.norm(2)
-                total_norm += param_norm.item() ** 2
-        total_norm = total_norm ** (1. / 2)
-        print(f'Epoch [{epoch + 1}/{num_epochs}], Gradient Norm: {total_norm:.4f}')
-        torch.save(model.state_dict(), f'osu_anti_cheat_model{epoch + 1}.pth')
-    if epoch > 1 and test_losses[-1] > test_losses[-2]:
-        print("Warning: Test loss increased. Potential overfitting detected.")
-
-torch.save(model.state_dict(), 'osu_anti_cheat_modelFINAL.pth')
