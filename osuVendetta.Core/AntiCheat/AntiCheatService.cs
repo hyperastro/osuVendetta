@@ -34,14 +34,15 @@ public interface IAntiCheatService
 
 public sealed class AntiCheatService : IAntiCheatService
 {
-    const int INPUT_SIZE = 1; // 1d array
+    const int BATCH_COUNT = 1; // 1d array
     const int MAX_TIME_STEPS = 8000;
     const int FEATURES_PER_ROW = 6;
     const int MAX_INPUTS = MAX_TIME_STEPS * FEATURES_PER_ROW;
 
-    const int CHUNK_SIZE = 1000;
-    const int FRAME_OVERLAY = 500;
-    const int FEATURES_PER_FRAME = 6;
+    public const int CHUNK_SIZE = 1000;
+    public const int FRAME_OVERLAY = 500;
+    public const int FEATURES_PER_FRAME = 6;
+    public const int TOTAL_FEATURE_SIZE_CHUNK = CHUNK_SIZE * FEATURES_PER_FRAME;
 
     const double MEAN_R1 = 7.03284752e+00f;
     const double MEAN_R2 = 2.09958789e-03f;
@@ -85,9 +86,9 @@ public sealed class AntiCheatService : IAntiCheatService
     {
         return new long[]
         {
-            INPUT_SIZE, // amount of inputs
-            input.Length / FEATURES_PER_ROW, // max dimensions
-            FEATURES_PER_ROW // features per dimension
+            BATCH_COUNT,
+            CHUNK_SIZE,
+            FEATURES_PER_ROW
         };
     }
 
@@ -134,7 +135,7 @@ public sealed class AntiCheatService : IAntiCheatService
             float deltaX = frame.X;
             float deltaY = frame.Y;
 
-            if (i > 1)
+            if (i > 0)
             {
                 ReplayFrame lastFrame = frames[i - 1];
                 deltaX -= lastFrame.X;
