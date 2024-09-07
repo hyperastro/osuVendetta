@@ -49,6 +49,6 @@ public class AntiCheatModel192x2 : AntiCheatModel
             shape
         });
 
-        return new ProbabilityResult(output["1"], output["0"]);
+        return new ProbabilityResult(output["0"], output["1"]);
     }
 }

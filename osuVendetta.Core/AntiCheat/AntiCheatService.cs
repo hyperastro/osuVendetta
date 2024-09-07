@@ -28,7 +28,6 @@ public interface IAntiCheatService
     Task<AntiCheatResult> ProcessReplayAsync(Replay replay, AntiCheatModelProviderArgs modelProviderArgs);
     Task<AntiCheatResult> RunModelAsync(RunModelArgs args);
     string? ValidateReplay(Replay replay);
-    float[] ProcessReplayTokens(List<ReplayFrame> frames);
     long[] CreateModelDimensionsFor(float[] input);
 }
 
@@ -74,7 +73,7 @@ public sealed class AntiCheatService : IAntiCheatService
         if (!string.IsNullOrEmpty(replayValidation))
             return AntiCheatResult.Invalid(replayValidation);
 
-        float[] replayTokens = ProcessReplayTokens(replay.ReplayFrames);
+        float[] replayTokens = ProcessReplayTokensNew(replay.ReplayFrames);
         long[] dimensions = CreateModelDimensionsFor(replayTokens);
 
         RunModelArgs modelArgs = new RunModelArgs(modelProviderArgs, new InputArgs(replayTokens, dimensions));
@@ -92,36 +91,6 @@ public sealed class AntiCheatService : IAntiCheatService
         };
     }
 
-    public float[] ProcessReplayTokens(List<ReplayFrame> frames)
-    {
-        float[] inputs = new float[Math.Min(frames.Count * FEATURES_PER_ROW, MAX_INPUTS)];
-        int framesToProcess = Math.Min(frames.Count, MAX_TIME_STEPS);
-
-        float lastX = frames[0].X;
-        float lastY = frames[0].Y;
-        int indexInputs = 0;
-
-        for (int i = 0; i < framesToProcess; i++)
-        {
-            ReplayFrame frame = frames[i];
-
-            inputs[indexInputs++] = frame.TimeDiff;
-            inputs[indexInputs++] = frame.X;
-            inputs[indexInputs++] = frame.Y;
-            inputs[indexInputs++] = frame.X - Interlocked.Exchange(ref lastX, frame.X);
-            inputs[indexInputs++] = frame.Y - Interlocked.Exchange(ref lastY, frame.Y);
-            inputs[indexInputs++] = GetKeyValue(frame.StandardKeys);
-        }
-
-        return inputs;
-    }
-
-
-    /* TODO:
-        - normalising VecX, VecY and frametime instead of PosX, PosY and frametime
-        - segments the file into 1000 time step chunks with a 500 time step overlay in each end
-        - change model size to 192 hidden_size and 2 layers (this only required for training, no?)
-     */
     public float[] ProcessReplayTokensNew(List<ReplayFrame> frames)
     {
         // include the first chunk being 1000 frames instead of 500 (-size, +1)
