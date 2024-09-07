@@ -26,26 +26,26 @@
         (This might take a few seconds depending on your network connection)
     </span>
     @if (IsDebugMode)
-    {
-        <span class="splash-text-debug">
+{
+    <span class="splash-text-debug">
             (DEBUG MODE: loading will take longer than in release!)
         </span>
-    }
+}
 </div>
 
 @code {
-    public bool IsDebugMode
+public bool IsDebugMode
 #if DEBUG
-        => true;
+    => true;
 #else
-        => false;
+    => false;
 #endif
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-            return;
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (!firstRender)
+        return;
 
-        await JSRuntime.InvokeVoidAsync("hideSplashScreen");
-    }
+    await JSRuntime.InvokeVoidAsync("hideSplashScreen");
+}
 }

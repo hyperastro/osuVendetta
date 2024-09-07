@@ -39,13 +39,13 @@
                     Drag and drop files here or click
                 </MudText>
                 @foreach (string file in FileNames)
-                {
-                    <MudChip T="string"
+            {
+                <MudChip T="string"
                              Color="Color.Dark"
                              Text="@file"
                              tabindex="-1" />
-                             <br />
-                }
+                         <br />
+            }
             </MudPaper>
         </ActivatorContent>
     </MudFileUpload>
@@ -75,90 +75,90 @@
 <script src="/onnx/onnxHelper.js"></script>
 
 @code {
-    const string DEFAULT_DRAG_CLASS = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
-    const string ONNX_JS_INTEROP_FUNC = "onnxInterop.run";
-    const string ONNX_MODEL_PATH = @"/api/File?file=56x4Model.onnx";
+const string DEFAULT_DRAG_CLASS = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
+const string ONNX_JS_INTEROP_FUNC = "onnxInterop.run";
+const string ONNX_MODEL_PATH = @"/api/File";
 
-    // FileUpload is set in html
-    public MudFileUpload<IReadOnlyList<IBrowserFile>> FileUpload;
-    public List<string> FileNames = new List<string>();
-    public string DragClass = DEFAULT_DRAG_CLASS;
+// FileUpload is set in html
+public MudFileUpload<IReadOnlyList<IBrowserFile>> FileUpload;
+public List<string> FileNames = new List<string>();
+public string DragClass = DEFAULT_DRAG_CLASS;
 
-    List<IBrowserFile> _filesToUpload = new List<IBrowserFile>();
+List<IBrowserFile> _filesToUpload = new List<IBrowserFile>();
 
-    public async Task ClearUploadAsync()
+public async Task ClearUploadAsync()
+{
+    ClearUploadDragClass();
+
+    await FileUpload.ClearAsync();
+
+    FileNames.Clear();
+    _filesToUpload.Clear();
+}
+
+public async Task OpenFilePickerAsync()
+{
+    await FileUpload.OpenFilePickerAsync();
+}
+
+public void OnInputFileChanged(InputFileChangeEventArgs e)
+{
+    ClearUploadDragClass();
+
+    _filesToUpload.Clear();
+    FileNames.Clear();
+
+    IReadOnlyList<IBrowserFile> files = e.GetMultipleFiles();
+    foreach (IBrowserFile file in files)
     {
-        ClearUploadDragClass();
-
-        await FileUpload.ClearAsync();
-
-        FileNames.Clear();
-        _filesToUpload.Clear();
+        _filesToUpload.Add(file);
+        FileNames.Add(file.Name);
     }
+}
 
-    public async Task OpenFilePickerAsync()
+public async Task UploadAsync()
+{
+    Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+
+    for (int i = 0; i < _filesToUpload.Count; i++)
     {
-        await FileUpload.OpenFilePickerAsync();
-    }
+        IBrowserFile file = _filesToUpload[i];
 
-    public void OnInputFileChanged(InputFileChangeEventArgs e)
-    {
-        ClearUploadDragClass();
+        using Stream fileStream = file.OpenReadStream();
+        using MemoryStream replayStream = new MemoryStream();
+        await fileStream.CopyToAsync(replayStream, (int)file.Size);
 
-        _filesToUpload.Clear();
-        FileNames.Clear();
+        replayStream.Seek(0, SeekOrigin.Begin);
 
-        IReadOnlyList<IBrowserFile> files = e.GetMultipleFiles();
-        foreach (IBrowserFile file in files)
+        try
         {
-            _filesToUpload.Add(file);
-            FileNames.Add(file.Name);
+            AntiCheatResult? result = await AntiCheatService.ProcessReplayAsync(replayStream,
+                new ModelProviderArgs(ONNX_MODEL_PATH, ONNX_JS_INTEROP_FUNC));
+
+            if (result is null)
+            {
+                Snackbar.Add($"Invalid replay: {file.Name}");
+                continue;
+            }
+
+            Snackbar.Add($"Replay {file.Name}:\n{result.Type}");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An exception occured:\n{ex}");
         }
     }
 
-    public async Task UploadAsync()
-    {
-        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+    await ClearUploadAsync();
+}
 
-        for (int i = 0; i < _filesToUpload.Count; i++)
-        {
-            IBrowserFile file = _filesToUpload[i];
+void SetUploadDragClass()
+{
+    DragClass = $"{DEFAULT_DRAG_CLASS} mud-border-primary";
+}
 
-            using Stream fileStream = file.OpenReadStream();
-            using MemoryStream replayStream = new MemoryStream();
-            await fileStream.CopyToAsync(replayStream, (int)file.Size);
-
-            replayStream.Seek(0, SeekOrigin.Begin);
-
-            try
-            {
-                AntiCheatResult? result = await AntiCheatService.ProcessReplayAsync(replayStream,
-                    new ModelProviderArgs(ONNX_MODEL_PATH, ONNX_JS_INTEROP_FUNC));
-
-                if (result is null)
-                {
-                    Snackbar.Add($"Invalid replay: {file.Name}");
-                    continue;
-                }
-
-                Snackbar.Add($"Replay {file.Name}:\n{result.Type}");
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add($"An exception occured:\n{ex}");
-            }
-        }
-
-        await ClearUploadAsync();
-    }
-
-    void SetUploadDragClass()
-    {
-        DragClass = $"{DEFAULT_DRAG_CLASS} mud-border-primary";
-    }
-
-    void ClearUploadDragClass()
-    {
-        DragClass = DEFAULT_DRAG_CLASS;
-    }
+void ClearUploadDragClass()
+{
+    DragClass = DEFAULT_DRAG_CLASS;
+}
 }

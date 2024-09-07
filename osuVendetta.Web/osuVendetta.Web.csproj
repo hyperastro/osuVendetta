@@ -21,7 +21,7 @@
     <Content Update="wwwroot\logo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Update="wwwroot\onnx\56x4Model.onnx">
+    <Content Update="wwwroot\onnx\192x2.onnx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

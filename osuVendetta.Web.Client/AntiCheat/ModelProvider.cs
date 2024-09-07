@@ -23,6 +23,6 @@ public class ModelProvider : IAntiCheatModelProvider
         ModelProviderArgs modelArgs = (ModelProviderArgs)args;
         await _jsRuntime.InvokeVoidAsync(_jsLoadFunc, modelArgs.PathToModel);
 
-        return new AntiCheatModel(_jsRuntime);
+        return new AntiCheatModel192x2(_jsRuntime);
     }
 }
