@@ -76,7 +76,12 @@ namespace osuVendetta.CLI
                 probabliltyRelaxTotal /= totalChunks;
                 probabliltyNormalTotal /= totalChunks;
 
-                float predictedClass = Math.Max(probabliltyRelaxTotal, probabliltyNormalTotal);
+                int predictedClass;
+
+                if (probabliltyRelaxTotal < probabliltyNormalTotal)
+                    predictedClass = 0;
+                else
+                    predictedClass = 1;
 
                 switch ((int)predictedClass)
                 {
