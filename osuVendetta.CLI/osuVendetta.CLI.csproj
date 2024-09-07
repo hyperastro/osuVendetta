@@ -1,0 +1,182 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="REPLAYDATA_0a5d0462d2c7f1c7d1444c9226481689.txt" />
+    <None Remove="REPLAYDATA_0a5d0462d2c7f1c7d1444c9226481689_processed.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_1.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_10.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_11.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_12.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_13.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_14.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_15.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_16.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_17.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_18.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_19.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_2.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_20.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_21.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_22.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_23.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_24.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_25.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_26.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_27.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_28.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_29.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_3.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_30.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_31.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_32.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_33.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_34.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_35.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_36.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_37.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_38.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_39.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_4.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_5.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_6.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_7.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_8.txt" />
+    <None Remove="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_9.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_1.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_10.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_11.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_12.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_13.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_14.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_15.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_16.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_17.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_18.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_19.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_2.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_20.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_21.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_22.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_23.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_24.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_25.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_26.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_27.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_28.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_29.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_3.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_30.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_31.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_32.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_33.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_34.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_35.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_36.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_37.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_38.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_39.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_4.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_5.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_6.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_7.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_8.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="REPLAYDATA_0c4ba34868da87ff45bd3626c86f3cd7\segment_9.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\osuVendetta.Core\osuVendetta.Core.csproj" />
+  </ItemGroup>
+
+</Project>
