@@ -1,8 +1,8 @@
-# osu!-AI-Anti-Cheat-Project
+# osu! Vendetta
 
-Welcome to the osu!-AI-Anti-Cheat Project!
+Welcome to the osu! Vendetta!
 
-Our goal is to train an AI model (using BERT, known for its bi-directional tokenization) to analyze osu! replays and catch cheaters with a high degree of accuracy.
+Our goal is to train an AI model (currently Bi-LSTM model) to analyze osu! replays and catch cheaters with a high degree of accuracy.
 
 How You Can Contribute: 
 
