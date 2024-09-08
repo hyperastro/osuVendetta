@@ -78,7 +78,10 @@ public sealed class AntiCheatService : IAntiCheatService
 
         RunModelArgs modelArgs = new RunModelArgs(modelProviderArgs, new InputArgs(replayTokens, dimensions));
 
-        return await RunModelAsync(modelArgs);
+        AntiCheatResult result = await RunModelAsync(modelArgs);
+        result.Metadata = new AntiCheatResultMetadata(replay.PlayerName);
+
+        return result;
     }
 
     public long[] CreateModelDimensionsFor(float[] input)

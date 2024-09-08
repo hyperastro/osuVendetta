@@ -14,23 +14,6 @@ public class AntiCheatModel192x2 : AntiCheatModel
         _jsRuntime = jsRuntime;
     }
 
-    static MaxValueIndex GetMaxValueIndex(Dictionary<string, float> values)
-    {
-        string maxIndex = string.Empty;
-        float maxValue = float.MinValue;
-
-        foreach (KeyValuePair<string, float> kvp in values)
-        {
-            if (kvp.Value > maxValue)
-            {
-                maxIndex = kvp.Key;
-                maxValue = kvp.Value;
-            }
-        }
-
-        return new MaxValueIndex(int.Parse(maxIndex), maxValue);
-    }
-
     public override async Task LoadAsync()
     {
 

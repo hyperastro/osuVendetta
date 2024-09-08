@@ -56,11 +56,6 @@
     </MudFileUpload>
     <MudToolBar Gutters="@false"
                 Class="relative d-flex justify-end gap-4">
-        @* <MudButton Color="Color.Primary"
-                   OnClick="@OpenFilePickerAsync"
-                   Variant="Variant.Filled">
-            Open file picker
-        </MudButton> *@
         <MudButton Color="Color.Primary"
                    Disabled="@(!FileNames.Any())"
                    OnClick="@UploadAsync"
@@ -75,11 +70,76 @@
         </MudButton>
     </MudToolBar>
 </MudStack>
+@* <div>
+  {replayItems.map((item, index) => (
+    <div key={index}>
+      <div>
+        <h3>{item.player}</h3>
+        <FileText />
+      </div>
+      <div>
+        <p>{item.song}</p>
+        <p>
+          [{item.difficulty}] - {item.date}
+        </p>
+        <div>
+          <span>Status:</span>
+          <span>
+            {item.status}
+          </span>
+        </div>
+        <div>
+          <div>
+            <span>Confidence</span>
+            <span>{item.confidence}%</span>
+          </div>
+          <div>
+            <div 
+              style={{width: `${item.confidence}%`}}
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  ))}
+</div> *@
+<MudGrid Spacing="6">
+    @foreach (ResultDisplay result in AntiCheatResults)
+    {
+        <MudItem>
+            <MudPaper Height="180px" Width="420px">
+                <MudText Style="color:cyan">@result.Player</MudText>
+                <MudDivider Style="padding-bottom:3px"/>
+                <MudText Style="color:cyan">@result.FileName</MudText>
+                <MudGrid>
+                    <MudItem Style="align-content:center">
+                        <MudText>Status: </MudText>
+                    </MudItem>
+                    <MudItem>
+                        @if (result.Result.Equals("Normal"))
+                        {
+                            <MudChip T="string" Color="Color.Success">@result.Result</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Color="Color.Error">@result.Result</MudChip>
+                        }
+                    </MudItem>
+                </MudGrid>
+                <MudText>@result.NormalProbability</MudText>
+                <MudText>@result.RelaxProbability</MudText>
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
 
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 <script src="/onnx/onnxHelper.js"></script>
 
 @code {
+
+    public record class ResultDisplay(string Player, string Result, string FileName, string NormalProbability, string RelaxProbability);
+
     const string DEFAULT_DRAG_CLASS = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
     const string ONNX_JS_INTEROP_FUNC = "onnxInterop.run";
     const string ONNX_MODEL_PATH = @"/api/File";
@@ -88,6 +148,8 @@
     public MudFileUpload<IReadOnlyList<IBrowserFile>> FileUpload;
     public List<string> FileNames = new List<string>();
     public string DragClass = DEFAULT_DRAG_CLASS;
+
+    public readonly List<ResultDisplay> AntiCheatResults = new List<ResultDisplay>();
 
     List<IBrowserFile> _filesToUpload = new List<IBrowserFile>();
 
@@ -123,6 +185,7 @@
 
     public async Task UploadAsync()
     {
+        AntiCheatResults.Clear();
         Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
         Snackbar.Configuration.RequireInteraction = true;
 
@@ -139,15 +202,33 @@
             try
             {
                 AntiCheatResult? result = await AntiCheatService.ProcessReplayAsync(replayStream,
-                    new ModelProviderArgs(ONNX_MODEL_PATH, ONNX_JS_INTEROP_FUNC));
+                new ModelProviderArgs(ONNX_MODEL_PATH, ONNX_JS_INTEROP_FUNC));
 
                 if (result is null)
                 {
                     Snackbar.Add($"Invalid replay: {file.Name}");
-                    continue;
+                    return;
+                    // continue;
                 }
 
-                Snackbar.Add($"Replay {file.Name}:\n{result.Type}");
+                string normalProbability = string.Empty;
+                string relaxProbability = string.Empty;
+
+                if (!string.IsNullOrEmpty(result.Message) && result.Type != AntiCheatResultType.Invalid)
+                {
+                    string[] split = result.Message.Split('/');
+                    normalProbability = split[0];
+                    relaxProbability = split[1];
+                }
+
+                ResultDisplay resultDisplay = new ResultDisplay(
+                result.Metadata?.Player ?? "Unkown Player",
+                result.Type.ToString(),
+                file.Name,
+                normalProbability,
+                relaxProbability);
+
+                AntiCheatResults.Add(resultDisplay);
             }
             catch (Exception ex)
             {

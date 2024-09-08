@@ -25,30 +25,6 @@ public abstract class AntiCheatModel : IAntiCheatModel
     }
 
     public abstract Task LoadAsync();
-    //{
-    //    _session?.Dispose();
-    //    _session = null;
-    //}
-
-    //{
-    //int start = chunkIndex * AntiCheatService.TOTAL_FEATURE_SIZE_CHUNK;
-
-    //using OrtValue value = OrtValue.CreateTensorValueFromMemory(
-    //    OrtMemoryInfo.DefaultInstance,
-    //    new Memory<float>(args.InputData, start, AntiCheatService.TOTAL_FEATURE_SIZE_CHUNK),
-    //    args.Dimensions);
-
-    //Dictionary<string, OrtValue> inputs = new Dictionary<string, OrtValue>
-    //        {
-    //            { "input", value }
-    //        };
-
-    //using IDisposableReadOnlyCollection<OrtValue> output = _session.Run(_runOptions, inputs, _session.OutputNames);
-    //ReadOnlySpan<float> outputData = output[0].GetTensorDataAsSpan<float>();
-
-    //probabliltyRelaxTotal += outputData[0];
-    //probabliltyNormalTotal += outputData[1];
-    //}
 
     public async Task<AntiCheatResult> RunModelAsync(InputArgs args)
     {
