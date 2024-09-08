@@ -142,17 +142,14 @@ public sealed class AntiCheatService : IAntiCheatService
             inputs[indexMain + 4] = Normalize(deltaY, MEAN_R3, STD_R3);
             inputs[indexMain + 5] = GetKeyValue(frame.StandardKeys);
 
-            if (indexOverflow > -1)
+            if (indexOverflow > -1 && indexOverflow < inputs.Length)
             {
-                if (indexOverflow < inputs.Length)
-                {
-                    inputs[indexOverflow + 0] = Normalize(inputs[indexMain + 0], MEAN_R1, STD_R1);
-                    inputs[indexOverflow + 1] = inputs[indexMain + 1];
-                    inputs[indexOverflow + 2] = inputs[indexMain + 2];
-                    inputs[indexOverflow + 3] = Normalize(inputs[indexMain + 3], MEAN_R2, STD_R2);
-                    inputs[indexOverflow + 4] = Normalize(inputs[indexMain + 4], MEAN_R3, STD_R3);
-                    inputs[indexOverflow + 5] = inputs[indexMain + 5];
-                }
+                inputs[indexOverflow + 0] = inputs[indexMain + 0];
+                inputs[indexOverflow + 1] = inputs[indexMain + 1];
+                inputs[indexOverflow + 2] = inputs[indexMain + 2];
+                inputs[indexOverflow + 3] = inputs[indexMain + 3];
+                inputs[indexOverflow + 4] = inputs[indexMain + 4];
+                inputs[indexOverflow + 5] = inputs[indexMain + 5];
             }
         });
 
