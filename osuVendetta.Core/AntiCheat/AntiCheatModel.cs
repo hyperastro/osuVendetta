@@ -1,4 +1,4 @@
-﻿using osuVendetta.Core.AntiCheat.Data;
+using osuVendetta.Core.AntiCheat.Data;
 using System.Collections.Concurrent;
 
 namespace osuVendetta.Core.AntiCheat;
@@ -56,9 +56,9 @@ public abstract class AntiCheatModel : IAntiCheatModel
         probabilityNormalTotal /= totalChunks;
 
         // Convert logits to probabilities using a softmax function
-        var probabilities = Softmax(probabilityRelaxTotal, probabilityNormalTotal);
+        ProbabilityResult probabilities = Softmax(probabilityRelaxTotal, probabilityNormalTotal);
 
-        string message = $"Normal Probability: {probabilities.normalProb:F4}/Relax Probability: {probabilities.relaxProb:F4}";
+        string message = $"Normal Probability: {probabilities.ProbabilityNormal:F4}/Relax Probability: {probabilities.ProbabilityRelax:F4}";
 
         if (probabilityRelaxTotal < probabilityNormalTotal)
             return AntiCheatResult.Relax(message);
@@ -66,15 +66,23 @@ public abstract class AntiCheatModel : IAntiCheatModel
             return AntiCheatResult.Normal(message);
     }
 
-    // Softmax function
-    private (float relaxProb, float normalProb) Softmax(float logitRelax, float logitNormal)
+    /// <summary>
+    /// Convert logits to probabilities using a softmax function.
+    /// </summary>
+    /// <param name="logitRelax">Logit value for Relax.</param>
+    /// <param name="logitNormal">Logit value for Normal.</param>
+    /// <returns>A <see cref="ProbabilityResult"/> contains the probabilities for relax and normal.</returns>
+    ProbabilityResult Softmax(float logitNormal, float logitRelax)
     {
         float maxLogit = Math.Max(logitRelax, logitNormal);
         float expRelax = MathF.Exp(logitRelax - maxLogit);
         float expNormal = MathF.Exp(logitNormal - maxLogit);
         float sumExp = expRelax + expNormal;
 
-        return ((expNormal / sumExp)*100, (expRelax / sumExp)*100);
+        return new ProbabilityResult(
+            ProbabilityRelax: (expRelax / sumExp) * 100,
+            ProbabilityNormal: (expNormal / sumExp) * 100
+        );
     }
 
     protected abstract void Unload();
