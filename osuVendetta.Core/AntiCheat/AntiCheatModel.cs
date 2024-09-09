@@ -55,13 +55,26 @@ public abstract class AntiCheatModel : IAntiCheatModel
         probabilityRelaxTotal /= totalChunks;
         probabilityNormalTotal /= totalChunks;
 
-        string message = $"Normal Probability: {probabilityNormalTotal}/Relax Probability: {probabilityRelaxTotal}";
+        // Convert logits to probabilities using a softmax function
+        var probabilities = Softmax(probabilityRelaxTotal, probabilityNormalTotal);
+
+        string message = $"Normal Probability: {probabilities.normalProb:F4}/Relax Probability: {probabilities.relaxProb:F4}";
 
         if (probabilityRelaxTotal < probabilityNormalTotal)
             return AntiCheatResult.Relax(message);
         else
             return AntiCheatResult.Normal(message);
+    }
 
+    // Softmax function
+    private (float relaxProb, float normalProb) Softmax(float logitRelax, float logitNormal)
+    {
+        float maxLogit = Math.Max(logitRelax, logitNormal);
+        float expRelax = MathF.Exp(logitRelax - maxLogit);
+        float expNormal = MathF.Exp(logitNormal - maxLogit);
+        float sumExp = expRelax + expNormal;
+
+        return ((expNormal / sumExp)*100, (expRelax / sumExp)*100);
     }
 
     protected abstract void Unload();
