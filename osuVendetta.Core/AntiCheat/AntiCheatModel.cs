@@ -32,7 +32,7 @@ public abstract class AntiCheatModel : IAntiCheatModel
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         int totalChunks = (int)Math.Ceiling(args.InputData.Length / (double)AntiCheatService.TOTAL_FEATURE_SIZE_CHUNK);
-        ConcurrentQueue<ProbabilityResult> results = new ConcurrentQueue<ProbabilityResult>();
+        ConcurrentQueue<ProbabilityResult> resultLogits = new ConcurrentQueue<ProbabilityResult>();
 
         await Parallel.ForAsync(0, totalChunks, async (chunkIndex, _) =>
         {
@@ -41,13 +41,35 @@ public abstract class AntiCheatModel : IAntiCheatModel
             Memory<float> inputMemory = new Memory<float>(args.InputData, start, AntiCheatService.TOTAL_FEATURE_SIZE_CHUNK);
             ProbabilityResult probability = await RunModelAsync(inputMemory, args.Dimensions);
 
-            results.Enqueue(probability);
+            resultLogits.Enqueue(probability);
         });
 
+        ProbabilityResult probabilities = ProcessLogitsToProbability(resultLogits, totalChunks);
+
+        AntiCheatResult result;
+
+        if (probabilities.ProbabilityRelax > probabilities.ProbabilityNormal)
+            result = AntiCheatResult.Relax();
+        else
+            result = AntiCheatResult.Normal();
+
+        result.ProbabilityResult = probabilities;
+
+        return result;
+    }
+
+    /// <summary>
+    /// <inheritdoc cref="Softmax(float, float)"/>
+    /// </summary>
+    /// <param name="logits">Max Logit Values</param>
+    /// <param name="totalChunks">Chunks used to create max logits</param>
+    /// <returns>A <see cref="ProbabilityResult"/> contains the probabilities for relax and normal.</returns>
+    ProbabilityResult ProcessLogitsToProbability(ConcurrentQueue<ProbabilityResult> logits, int totalChunks)
+    {
         float probabilityRelaxTotal = 0;
         float probabilityNormalTotal = 0;
 
-        while (results.TryDequeue(out ProbabilityResult probabilityResult))
+        while (logits.TryDequeue(out ProbabilityResult probabilityResult))
         {
             probabilityRelaxTotal += probabilityResult.ProbabilityRelax;
             probabilityNormalTotal += probabilityResult.ProbabilityNormal;
@@ -56,19 +78,7 @@ public abstract class AntiCheatModel : IAntiCheatModel
         probabilityRelaxTotal /= totalChunks;
         probabilityNormalTotal /= totalChunks;
 
-        // Convert logits to probabilities using a softmax function
-        ProbabilityResult probabilities = Softmax(probabilityRelaxTotal, probabilityNormalTotal);
-
-        AntiCheatResult result;
-
-        if (probabilityRelaxTotal < probabilityNormalTotal)
-            result = AntiCheatResult.Relax();
-        else
-            result = AntiCheatResult.Normal();
-
-        result.ProbabilityResult = probabilities;
-
-        return result;
+        return Softmax(probabilityRelaxTotal, probabilityNormalTotal);
     }
 
     /// <summary>
