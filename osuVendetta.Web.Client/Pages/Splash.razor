@@ -14,7 +14,7 @@
         if (splashScreen == null)
             return;
 
-        splashScreen.hidden = true;
+        // splashScreen.hidden = true;
     }
 </script>
 
@@ -25,11 +25,15 @@
     <span class="splash-text-sub">
         (This might take a few seconds depending on your network connection)
     </span>
+    <div class="splash-loader-container">
+        <div class="splash-loader">
+        </div>
+    </div>
     @if (IsDebugMode)
 {
     <span class="splash-text-debug">
             (DEBUG MODE: loading will take longer than in release!)
-        </span>
+    </span>
 }
 </div>
 
