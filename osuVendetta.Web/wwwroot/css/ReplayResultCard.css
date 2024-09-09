@@ -1,0 +1,22 @@
+﻿.rrc-container {
+    width:35%;
+    padding: 5px;
+    border: 5px outset lightgray;
+    border-radius: 15px;
+    color: white;
+}
+
+.rrc-filename {
+    color: cyan;
+    border-bottom: 2px solid gray;
+    margin-bottom: 5px;
+}
+
+.rrc-metadata {
+    color: white;
+}
+
+.rrc-probability {
+    margin-left: 7px;
+    margin-right: 7px;
+}

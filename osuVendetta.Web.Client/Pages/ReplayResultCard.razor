@@ -1,0 +1,51 @@
+﻿@page "/rrc"
+
+<link href="/css/ReplayResultCard.css" rel="stylesheet" />
+
+@if (DisplayData is not null)
+{
+    <MudPaper class="rrc-container">
+        <MudText Class="rrc-filename">@DisplayData.FileName</MudText>
+        <div class="rrc-metadata">
+            <MudText>Played by: <b>@DisplayData.Player</b></MudText>
+        </div>
+        <MudGrid>
+            <MudItem Style="align-content:center">
+                <MudText>Status: </MudText>
+            </MudItem>
+            <MudItem>
+                <MudChip T="string" Color="@DisplayData.ResultColor">@DisplayData.Result</MudChip>
+            </MudItem>
+        </MudGrid>
+        <MudText>Probability of cheating:</MudText>
+        <div class="rrc-probability">
+            <MudProgressLinear Color="DisplayData.ResultColor" Size="Size.Medium" Value="@DisplayData.RelaxProbability" />
+        </div>
+    </MudPaper>
+}
+
+@code {
+    public class ReplayResultCardModel
+    {
+        public string FileName { get; set; }
+        public string Player { get; set; } 
+
+        public string Result { get; set; }
+        public Color ResultColor { get; set; }
+        public float NormalProbability { get; set; }
+        public float RelaxProbability { get; set; }
+
+        public ReplayResultCardModel(string fileName, string player, string result, Color resultColor, float normalProbability, float relaxProbability)
+        {
+            FileName = fileName;
+            Player = player;
+            Result = result;
+            ResultColor = resultColor;
+            NormalProbability = normalProbability;
+            RelaxProbability = relaxProbability;
+        }
+    }
+
+    [Parameter] 
+    public ReplayResultCardModel? DisplayData { get; set; }
+}

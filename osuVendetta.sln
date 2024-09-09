@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "osuVendetta.Web.Client", "o
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "osuVendetta.Core", "osuVendetta.Core\osuVendetta.Core.csproj", "{B4741442-829D-4F89-B75C-4FFD18CB78D3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osuVendetta.CLI", "osuVendetta.CLI\osuVendetta.CLI.csproj", "{F87CEEA9-AA80-4064-94E5-A1C7DC71CF2E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "osuVendetta.CLI", "osuVendetta.CLI\osuVendetta.CLI.csproj", "{F87CEEA9-AA80-4064-94E5-A1C7DC71CF2E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

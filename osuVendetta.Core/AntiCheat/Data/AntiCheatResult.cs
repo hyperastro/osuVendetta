@@ -5,8 +5,10 @@ public record class AntiCheatResultMetadata(string Player);
 public class AntiCheatResult
 {
     public AntiCheatResultType Type { get; init; }
+
     public string? Message { get; init; }
     public AntiCheatResultMetadata? Metadata { get; set; }
+    public ProbabilityResult ProbabilityResult { get; set; }
 
     public AntiCheatResult(AntiCheatResultType type) : this(type, null)
     {

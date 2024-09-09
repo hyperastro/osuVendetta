@@ -8,6 +8,7 @@
 @using OsuParsers.Enums.Replays
 @using OsuParsers.Replays
 @using OsuParsers.Replays.Objects
+@using static osuVendetta.Web.Client.Pages.ReplayResultCard
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @inject IAntiCheatService AntiCheatService
 @inject ISnackbar Snackbar
@@ -23,115 +24,67 @@
     • Do <b>NOT</b> rely solely on the model's output; double-check findings independently. <br />
 </MudAlert>
 
-<MudStack Style="width: 100%">
-    <MudFileUpload T="IReadOnlyList<IBrowserFile>"
-                   @ref="FileUpload"
-                   OnFilesChanged="OnInputFileChanged"
-                   AppendMultipleFiles
-                   Hidden="@false"
-                   InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
-                   InputStyle="opacity:0"
-                   tabindex="-1"
-                   @ondrop="@ClearUploadDragClass"
-                   @ondragenter="@SetUploadDragClass"
-                   @ondragleave="@ClearUploadDragClass"
-                   @ondragend="@ClearUploadDragClass">
-        <ActivatorContent>
-            <MudPaper Height="300px"
-                      Outlined="true"
-                      Class="@DragClass">
-                <MudText Typo="Typo.h6">
-                    Drag and drop files here or click
-                </MudText>
-                @foreach (string file in FileNames)
-                {
-                    <MudChip T="string"
-                                 Color="Color.Dark"
-                                 Text="@file"
-                                 tabindex="-1" />
-                             <br />
-                }
-            </MudPaper>
-        </ActivatorContent>
-    </MudFileUpload>
-    <MudToolBar Gutters="@false"
-                Class="relative d-flex justify-end gap-4">
-        <MudButton Color="Color.Primary"
-                   Disabled="@(!FileNames.Any())"
-                   OnClick="@UploadAsync"
-                   Variant="Variant.Filled">
-            Upload
-        </MudButton>
-        <MudButton Color="Color.Error"
-                   Disabled="@(!FileNames.Any())"
-                   OnClick="@ClearUploadAsync"
-                   Variant="Variant.Filled">
-            Clear
-        </MudButton>
-    </MudToolBar>
-</MudStack>
-@* <div>
-  {replayItems.map((item, index) => (
-    <div key={index}>
-      <div>
-        <h3>{item.player}</h3>
-        <FileText />
-      </div>
-      <div>
-        <p>{item.song}</p>
-        <p>
-          [{item.difficulty}] - {item.date}
-        </p>
-        <div>
-          <span>Status:</span>
-          <span>
-            {item.status}
-          </span>
-        </div>
-        <div>
-          <div>
-            <span>Confidence</span>
-            <span>{item.confidence}%</span>
-          </div>
-          <div>
-            <div 
-              style={{width: `${item.confidence}%`}}
-            ></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  ))}
-</div> *@
-<MudGrid Spacing="6">
-    @foreach (ResultDisplay result in AntiCheatResults)
+<div>
+    <MudStack Style="width: 100%;position: relative; color: antiquewhite;">
+        <MudOverlay Visible="@IsFileProcessingOverlayVisible" Style="background: rgba(1,1,1,0.75); z-index:50" Absolute="true">
+            <MudText>Currently processing files</MudText>
+            <MudText>@FileCurrentlyProcessed (@FilesProcessed/@FilesToProcessTotal)</MudText>
+            <MudProgressLinear Max="@FilesToProcessTotal" Size="Size.Large" Value="@FilesProcessed" />
+        </MudOverlay>
+        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                       @ref="FileUpload"
+                       OnFilesChanged="OnInputFileChanged"
+                       AppendMultipleFiles
+                       Hidden="@false"
+                       InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                       InputStyle="opacity:0"
+                       tabindex="-1"
+                       @ondrop="@ClearUploadDragClass"
+                       @ondragenter="@SetUploadDragClass"
+                       @ondragleave="@ClearUploadDragClass"
+                       @ondragend="@ClearUploadDragClass">
+            <ActivatorContent>
+                <MudPaper Height="300px"
+                          Outlined="true"
+                          Class="@DragClass">
+                    <MudText Typo="Typo.h6">
+                        Drag and drop files here or click
+                    </MudText>
+                    @foreach (string file in FileNames)
+                    {
+                        <MudChip T="string"
+                                     Color="Color.Dark"
+                                     Text="@file"
+                                     tabindex="-1" />
+                                 <br />
+                    }
+                </MudPaper>
+            </ActivatorContent>
+        </MudFileUpload>
+        <MudToolBar Gutters="@false"
+                    Class="relative d-flex justify-end gap-4">
+            <MudButton Color="Color.Primary"
+                       Disabled="@(!FileNames.Any())"
+                       OnClick="@UploadAsync"
+                       Variant="Variant.Filled">
+                Upload
+            </MudButton>
+            <MudButton Color="Color.Error"
+                       Disabled="@(!FileNames.Any())"
+                       OnClick="@ClearUploadAsync"
+                       Variant="Variant.Filled">
+                Clear
+            </MudButton>
+        </MudToolBar>
+    </MudStack>
+</div>
+
+<MudStack Row="true" Wrap="Wrap.Wrap" Justify="Justify.SpaceAround">
+    @foreach (ReplayResultCardModel resultCard in AntiCheatResults)
     {
-        <MudItem>
-            <MudPaper Height="180px" Width="420px">
-                <MudText Style="color:cyan">@result.Player</MudText>
-                <MudDivider Style="padding-bottom:3px"/>
-                <MudText Style="color:cyan">@result.FileName</MudText>
-                <MudGrid>
-                    <MudItem Style="align-content:center">
-                        <MudText>Status: </MudText>
-                    </MudItem>
-                    <MudItem>
-                        @if (result.Result.Equals("Normal"))
-                        {
-                            <MudChip T="string" Color="Color.Success">@result.Result</MudChip>
-                        }
-                        else
-                        {
-                            <MudChip T="string" Color="Color.Error">@result.Result</MudChip>
-                        }
-                    </MudItem>
-                </MudGrid>
-                <MudText>@result.NormalProbability</MudText>
-                <MudText>@result.RelaxProbability</MudText>
-            </MudPaper>
-        </MudItem>
+        <ReplayResultCard DisplayData="resultCard" />
     }
-</MudGrid>
+</MudStack>
 
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 <script src="/onnx/onnxHelper.js"></script>
@@ -149,7 +102,12 @@
     public List<string> FileNames = new List<string>();
     public string DragClass = DEFAULT_DRAG_CLASS;
 
-    public readonly List<ResultDisplay> AntiCheatResults = new List<ResultDisplay>();
+    public bool IsFileProcessingOverlayVisible;
+    public int FilesToProcessTotal;
+    public int FilesProcessed;
+    public string? FileCurrentlyProcessed;
+
+    public readonly List<ReplayResultCardModel> AntiCheatResults = new List<ReplayResultCardModel>();
 
     List<IBrowserFile> _filesToUpload = new List<IBrowserFile>();
 
@@ -189,9 +147,17 @@
         Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
         Snackbar.Configuration.RequireInteraction = true;
 
+        IsFileProcessingOverlayVisible = true;
+        FilesToProcessTotal = _filesToUpload.Count;
+        FilesProcessed = 0;
+
         for (int i = 0; i < _filesToUpload.Count; i++)
         {
             IBrowserFile file = _filesToUpload[i];
+
+            FileCurrentlyProcessed = file.Name;
+
+            StateHasChanged();
 
             using Stream fileStream = file.OpenReadStream();
             using MemoryStream replayStream = new MemoryStream();
@@ -221,22 +187,29 @@
                     relaxProbability = split[1];
                 }
 
-                ResultDisplay resultDisplay = new ResultDisplay(
-                result.Metadata?.Player ?? "Unkown Player",
-                result.Type.ToString(),
-                file.Name,
-                normalProbability,
-                relaxProbability);
+                ReplayResultCardModel resultCard = new ReplayResultCardModel(
+                    file.Name,
+                    result.Metadata?.Player ?? "Unkown Player",
+                    result.Type.ToString(),
+                    result.Type == AntiCheatResultType.Normal ? Color.Success : Color.Error,
+                    result.ProbabilityResult.ProbabilityNormal,
+                    result.ProbabilityResult.ProbabilityRelax);
 
-                AntiCheatResults.Add(resultDisplay);
+                AntiCheatResults.Add(resultCard);
+                FilesProcessed++;
+                StateHasChanged();
             }
             catch (Exception ex)
             {
+                FilesProcessed++;
+                StateHasChanged();
                 Snackbar.Add($"An exception occured:\n{ex}");
             }
         }
 
         await ClearUploadAsync();
+        IsFileProcessingOverlayVisible = false;
+        StateHasChanged();
     }
 
     void SetUploadDragClass()

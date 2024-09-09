@@ -3,9 +3,10 @@ using System.Collections.Concurrent;
 
 namespace osuVendetta.Core.AntiCheat;
 
+public record struct ProbabilityResult(float ProbabilityRelax, float ProbabilityNormal);
+
 public abstract class AntiCheatModel : IAntiCheatModel
 {
-    protected record struct ProbabilityResult(float ProbabilityRelax, float ProbabilityNormal);
 
     public bool IsDisposed { get; private set; }
     public string ModelPath { get; private set; }
@@ -58,12 +59,16 @@ public abstract class AntiCheatModel : IAntiCheatModel
         // Convert logits to probabilities using a softmax function
         ProbabilityResult probabilities = Softmax(probabilityRelaxTotal, probabilityNormalTotal);
 
-        string message = $"Normal Probability: {probabilities.ProbabilityNormal:F4}/Relax Probability: {probabilities.ProbabilityRelax:F4}";
+        AntiCheatResult result;
 
         if (probabilityRelaxTotal < probabilityNormalTotal)
-            return AntiCheatResult.Relax(message);
+            result = AntiCheatResult.Relax();
         else
-            return AntiCheatResult.Normal(message);
+            result = AntiCheatResult.Normal();
+
+        result.ProbabilityResult = probabilities;
+
+        return result;
     }
 
     /// <summary>
