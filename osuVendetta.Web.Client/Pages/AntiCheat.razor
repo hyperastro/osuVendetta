@@ -33,6 +33,7 @@
         </MudOverlay>
         <MudFileUpload T="IReadOnlyList<IBrowserFile>"
                        @ref="FileUpload"
+                       MaximumFileCount="50"
                        OnFilesChanged="OnInputFileChanged"
                        AppendMultipleFiles
                        Hidden="@false"
@@ -44,21 +45,32 @@
                        @ondragleave="@ClearUploadDragClass"
                        @ondragend="@ClearUploadDragClass">
             <ActivatorContent>
-                <MudPaper Height="300px"
-                          Outlined="true"
-                          Class="@DragClass">
-                    <MudText Typo="Typo.h6">
-                        Drag and drop files here or click
-                    </MudText>
-                    @foreach (string file in FileNames)
-                    {
-                        <MudChip T="string"
-                                     Color="Color.Dark"
-                                     Text="@file"
-                                     tabindex="-1" />
-                                 <br />
-                    }
-                </MudPaper>
+          <MudPaper Height="300px"
+          Outlined="true"
+          Class="@DragClass"
+          Style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px;">
+    <MudText Typo="Typo.h6" Style="grid-column: span 2; text-align: center;">
+        Drag and drop files here or click
+    </MudText>
+    @for (int i = 0; i < FileNames.Count; i++)
+    {
+        <MudChip T="string"
+                 Color="Color.Dark"
+                 Text="@FileNames[i]"
+                 tabindex="-1"
+                 Style="@GetGridStyle(i)" />
+    }
+</MudPaper>
+
+@code {
+    private string GetGridStyle(int index)
+    {
+        int row = (index % 5) + 2;  // Calculate the row (start from row 2 to align with your example)
+        int column = (index / 5) + 1; // Calculate the column (1 or 2)
+        return $"grid-row: {row}; grid-column: {column};";
+    }
+}
+
             </ActivatorContent>
         </MudFileUpload>
         <MudToolBar Gutters="@false"
@@ -133,7 +145,7 @@
         _filesToUpload.Clear();
         FileNames.Clear();
 
-        IReadOnlyList<IBrowserFile> files = e.GetMultipleFiles();
+        IReadOnlyList<IBrowserFile> files = e.GetMultipleFiles(50);
         foreach (IBrowserFile file in files)
         {
             _filesToUpload.Add(file);
