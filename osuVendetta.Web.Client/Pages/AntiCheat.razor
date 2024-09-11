@@ -102,9 +102,6 @@
 <script src="/onnx/onnxHelper.js"></script>
 
 @code {
-
-    public record class ResultDisplay(string Player, string Result, string FileName, string NormalProbability, string RelaxProbability);
-
     const string DEFAULT_DRAG_CLASS = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
     const string ONNX_JS_INTEROP_FUNC = "onnxInterop.run";
     const string ONNX_MODEL_PATH = @"/api/File";
