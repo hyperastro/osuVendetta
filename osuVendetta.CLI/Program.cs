@@ -17,18 +17,6 @@ namespace osuVendetta.CLI;
 internal partial class Program
 {
 
-    static SelectionPrompt<string> CreateMainMenuPrompt()
-    {
-        return new SelectionPrompt<string>()
-            .Title("osu!Vendetta Main Menu\n\nPick an option from the list below (arrow keys):")
-            .AddChoices(new string[]
-            {
-                "Process Files",
-                "Process Folder",
-                "Exit"
-            });
-    }
-
     static async Task Main(string[] args)
     {
         if (args.Length > 0)
@@ -82,75 +70,140 @@ internal partial class Program
         }
 
         for (; ; )
-        {
-            string result = AnsiConsole.Prompt(CreateMainMenuPrompt());
-            
-            switch (result)
+            await MainMenu();
+    }
+
+    static async Task MainMenu()
+    {
+        const string PROCESS_FILE_OPTION = "Process File";
+        const string PROCESS_FOLDER_OPTION = "Process Folder";
+        const string EXIT_OPTION = "Exit";
+
+        string result = AnsiConsole.Prompt(new SelectionPrompt<string>()
+            .Title("osu!Vendetta Main Menu\n\nPick an option from the list below (arrow keys):")
+            .AddChoices(new string[]
             {
-                case "Process Files":
-                    string filePath = AnsiConsole.Prompt(
-                        new TextPrompt<string>("Enter the path to the file:"))
-                        .Trim('"');
+                PROCESS_FILE_OPTION,
+                PROCESS_FOLDER_OPTION,
+                EXIT_OPTION
+            }));
 
-                    if (!File.Exists(filePath))
-                    {
-                        Console.WriteLine("Invalid path, press any key to continue...");
-                        Console.ReadKey();
-                        Console.Clear();
-                        break;
-                    }
+        switch (result)
+        {
+            case PROCESS_FILE_OPTION:
+                await MenuProcessFile();
+                break;
 
-                    await ProcessFiles(new List<FileInfo> { new FileInfo(filePath) });
-                    Console.WriteLine();
-                    Console.WriteLine("———");
-                    Console.WriteLine();
-                    break;
+            case PROCESS_FOLDER_OPTION:
+                await MenuProcessFolder();
+                break;
 
-                case "Process Folder":
-                    string folderPath = AnsiConsole.Prompt(
-                        new TextPrompt<string>("Enter the path to the file:"))
-                        .Trim('"');
+            case EXIT_OPTION:
+                MenuExit();
+                break;
+        }
+    }
 
-                    if (!Directory.Exists(folderPath))
-                    {
-                        Console.WriteLine("Invalid path, press any key to continue...");
-                        Console.ReadKey();
-                        Console.Clear();
-                        break;
-                    }
+    static async Task MenuProcessFile()
+    {
+        const string FILE_PROMPT = "Enter the path to the file:";
 
-                    await ProcessFiles(new DirectoryInfo(folderPath)
-                        .EnumerateFiles("*.osr", SearchOption.AllDirectories)
-                        .ToList());
-                    Console.WriteLine();
-                    Console.WriteLine("———");
-                    Console.WriteLine();
-                    break;
+        string filePath = AnsiConsole.Prompt(new TextPrompt<string>(FILE_PROMPT))
+                          .Trim('"');
 
-                case "Exit":
-                    Environment.Exit(0);
-                    break;
-            }
+        while (!File.Exists(filePath))
+        {
+            Console.WriteLine($"Invalid path {filePath}");
+            filePath = AnsiConsole.Prompt(new TextPrompt<string>(FILE_PROMPT))
+                       .Trim('"');
         }
 
+        await ProcessFiles(new List<FileInfo> { new FileInfo(filePath) });
+
+        Console.WriteLine();
+        Console.WriteLine("———");
+        Console.WriteLine();
     }
+
+    static async Task MenuProcessFolder()
+    {
+        const string DIRECTORY_PROMPT = "Enter the path to the folder containing the replays:";
+
+        string folderPath = AnsiConsole.Prompt(new TextPrompt<string>(DIRECTORY_PROMPT))
+                            .Trim('"');
+
+        while (!Directory.Exists(folderPath))
+        {
+            Console.WriteLine($"Invalid path {folderPath}");
+            folderPath = AnsiConsole.Prompt(new TextPrompt<string>(DIRECTORY_PROMPT))
+                         .Trim('"');
+        }
+
+        await ProcessFiles(new DirectoryInfo(folderPath)
+            .EnumerateFiles("*.osr", SearchOption.AllDirectories)
+            .ToList());
+
+        Console.WriteLine();
+        Console.WriteLine("———");
+        Console.WriteLine();
+    }
+
+    static void MenuExit()
+    {
+        Environment.Exit(0);
+    }
+
+    record class ModelOutput(string File, AntiCheatResult Result);
 
     static async Task ProcessFiles(List<FileInfo> files)
     {
+        const string CSV_PATTERN = "\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\",\"{5}\"";
+
         AntiCheatModelProvider provider = new AntiCheatModelProvider();
         AntiCheatService service = new AntiCheatService(provider);
         IAntiCheatModel model = await provider.LoadModelAsync(new AntiCheatProviderArgs());
 
-        foreach (FileInfo file in files)
+        ConcurrentQueue<ModelOutput> modelOutput = new ConcurrentQueue<ModelOutput>();
+
+        await Parallel.ForEachAsync(files, async (file, _) =>
         {
+            try
+            {
+
             List<ReplayFrame> replayFrames = ReplayDecoder.Decode(file.FullName).ReplayFrames;
 
             float[] inputData = service.ProcessReplayTokensNew(replayFrames);
             long[] dimensions = service.CreateModelDimensionsFor(inputData);
 
             AntiCheatResult result = await model.RunModelAsync(new InputArgs(inputData, dimensions));
+            modelOutput.Enqueue(new ModelOutput(file.Name, result));
 
-            Console.WriteLine($"Result for {file}:\n\t{result.Type} ({result.Message})");
+            Console.WriteLine($"Result for {file}:\n\t{result.Type} (Probability of cheating: {(100f - result.ProbabilityResult.ProbabilityNormal):N2}%) ({result.Message ?? string.Empty})");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Something went wrong processing the file: {file.Name}:\n{ex}");
+            }
+        });
+
+        StringBuilder output = new StringBuilder();
+        output.AppendLine(string.Format(CSV_PATTERN, "File", "Result", "Player", "Probability Normal", "Probability Relax", "Message"));
+
+        while (modelOutput.TryDequeue(out ModelOutput? result))
+        {
+            output.AppendLine(string.Format(CSV_PATTERN,
+                result.File,
+                result.Result.Type,
+                result.Result.Metadata?.Player ?? "Unkown Player",
+                result.Result.ProbabilityResult.ProbabilityNormal,
+                result.Result.ProbabilityResult.ProbabilityRelax,
+                result.Result.Message ?? string.Empty));
         }
+
+        DateTime date = DateTime.Now;
+        string csvName = $"{date:dd}.{date:MM}.{date:yyyy}-{date:HH}.{date:mm}-{date.Ticks}-AntiCheatReport.csv";
+
+        File.WriteAllText(csvName, output.ToString());
+        Console.WriteLine($"Saved report to: {Path.Combine(Environment.CurrentDirectory, csvName)}");
     }
 }

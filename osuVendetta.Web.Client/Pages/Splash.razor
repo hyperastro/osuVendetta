@@ -3,10 +3,6 @@
 
 <link href="/splash/splash.css" rel="stylesheet" />
 
-@* When I tested this inside 'server/wwwroot/splash/splash.js'
-   then 'await JSRuntime.InvokeVoidAsync("hideSplashScreen");' resulted in not found
-   need to investigate this
-*@
 <script>
     function hideSplashScreen() {
         var splashScreen = document.getElementById('splash-screen');
@@ -30,11 +26,11 @@
         </div>
     </div>
     @if (IsDebugMode)
-{
-    <span class="splash-text-debug">
+    {
+        <span class="splash-text-debug">
             (DEBUG MODE: loading will take longer than in release!)
-    </span>
-}
+        </span>
+    }
 </div>
 
 @code {
