@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 
 namespace osuVendetta.Wasm;
 
-
 public partial class Core
 {
     public static string? ModelPath => _modelPath;
