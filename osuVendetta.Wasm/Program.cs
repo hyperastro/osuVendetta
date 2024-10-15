@@ -29,13 +29,13 @@ public partial class Core
     }
 
     [JSImport("loadModel")]
-    internal static partial void LoadModel(string modelPath);
+    internal static partial Task LoadModel(string modelPath);
 
     [JSImport("loadConfig")]
-    internal static partial string LoadConfigJson();
+    internal static partial Task<string> LoadConfigJson();
 
     [JSImport("runModel")]
-    internal static partial string RunModel(string[] inputNames, double[] inputValues, int[] shape);
+    internal static partial Task<string> RunModel(double[] inputValues, int[] shape);
 
     [JSExport]
     internal static async Task InitializeAsync(string config, string modelPath)

@@ -30,7 +30,7 @@ public class AntiCheatModel192x2 : IAntiCheatModel
         return Task.CompletedTask;
     }
 
-    public Logit Run(ModelInput input)
+    public Task<Logit> Run(ModelInput input)
     {
         ArgumentNullException.ThrowIfNull(_runOptions);
         ArgumentNullException.ThrowIfNull(_inferenceSession);
@@ -48,11 +48,11 @@ public class AntiCheatModel192x2 : IAntiCheatModel
         using IDisposableReadOnlyCollection<OrtValue> output = _inferenceSession.Run(_runOptions, inputs, _inferenceSession.OutputNames);
         ReadOnlySpan<float> outputData = output[0].GetTensorDataAsSpan<float>();
 
-        return new Logit
+        return Task.FromResult(new Logit
         {
             Normal = outputData[0],
             Relax = outputData[1]
-        };
+        });
     }
 
     public Task UnloadAsync()

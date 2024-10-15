@@ -18,5 +18,5 @@ public interface IAntiCheatModel
 {
     Task LoadAsync(AntiCheatModelLoadArgs loadArgs);
     Task UnloadAsync();
-    Logit Run(ModelInput input);
+    Task<Logit> Run(ModelInput input);
 }

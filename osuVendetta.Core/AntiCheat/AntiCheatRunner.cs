@@ -42,7 +42,7 @@ public class AntiCheatRunner
             }
 
             ReplayTokens tokens = await _replayProcessor.CreateTokensFromFramesAsync(replay.ReplayFrames, runInParallel);
-            return RunModel(tokens);
+            return await RunModel(tokens);
         }
         catch (Exception ex)
         {
@@ -53,16 +53,16 @@ public class AntiCheatRunner
         }
     }
 
-    BaseAntiCheatResult RunModel(ReplayTokens tokens)
+    async Task<BaseAntiCheatResult> RunModel(ReplayTokens tokens)
     {
         int totalChunks = (int)Math.Ceiling(tokens.Tokens.Length / (double)_config.TotalFeatureSizePerChunk);
         ConcurrentQueue<Logit> resultLogits = new ConcurrentQueue<Logit>();
 
-        Parallel.For(0, totalChunks, (chunkIndex, _) =>
+        await Parallel.ForAsync(0, totalChunks, async (chunkIndex, _) =>
         {
             int start = chunkIndex * _config.TotalFeatureSizePerChunk;
 
-            Logit logit = _antiCheatModel.Run(new ModelInput
+            Logit logit = await _antiCheatModel.Run(new ModelInput
             {
                 Data = new Memory<float>(tokens.Tokens, start, _config.TotalFeatureSizePerChunk),
                 DataShape = tokens.ModelDimensions
@@ -76,6 +76,8 @@ public class AntiCheatRunner
             CheatProbability = ProcessLogitsToProbability(resultLogits, totalChunks)
         };
     }
+
+
 
     /// <summary>
     /// <inheritdoc cref="Softmax(float, float)"/>

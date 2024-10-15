@@ -1,6 +1,7 @@
 ﻿using osuVendetta.Core.AntiCheat;
 using osuVendetta.Core.AntiCheat.Data;
 using System;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -8,8 +9,6 @@ namespace osuVendetta.Wasm;
 
 public class AntiCheatModel192x2 : IAntiCheatModel
 {
-    static readonly string[] _inputNames = ["input"];
-
     public Task LoadAsync(AntiCheatModelLoadArgs loadArgs)
     {
         ArgumentNullException.ThrowIfNull(Core.ModelPath);
@@ -19,7 +18,7 @@ public class AntiCheatModel192x2 : IAntiCheatModel
         return Task.CompletedTask;
     }
 
-    public Logit Run(ModelInput input)
+    public async Task<Logit> Run(ModelInput input)
     {
         double[] data = new double[input.Data.Length];
 
@@ -31,7 +30,8 @@ public class AntiCheatModel192x2 : IAntiCheatModel
         for (int i = 0; i < dataShape.Length; i++)
             dataShape[i] = (int)input.DataShape[i];
 
-        return JsonSerializer.Deserialize<Logit>(Core.RunModel(_inputNames, data, dataShape), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        string logitJson = await Core.RunModel(data, dataShape);
+        return JsonSerializer.Deserialize<Logit>(logitJson, new JsonSerializerOptions(JsonSerializerDefaults.Web));
     }
 
     public Task UnloadAsync()
