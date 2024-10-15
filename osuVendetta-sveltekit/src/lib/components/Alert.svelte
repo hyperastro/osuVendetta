@@ -12,16 +12,7 @@
     margin-bottom: 1rem;
     border-radius: 4px;
   }
-  .normal {
-    background-color: #d1ecf1;
-    color: #0c5460;
-  }
-  .warning {
-    background-color: #fff3cd;
-    color: #856404;
-  }
-  .error {
-    background-color: #f8d7da;
-    color: #721c24;
-  }
+  .normal { background-color: #d1ecf1; color: #0c5460; }
+  .warning { background-color: #fff3cd; color: #856404; }
+  .error { background-color: #f8d7da; color: #721c24; }
 </style>
