@@ -15,32 +15,77 @@ from optuna.trial import Trial
 import torch.optim as optim
 import requests
 from torch.utils.data import Dataset, DataLoader, Subset
-
+import zipfile
+import time
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"CUDA Available: {torch.cuda.is_available()}")
     print(f"CUDA Device: {torch.cuda.current_device()}")
     print(f"CUDA Device Name: {torch.cuda.get_device_name(0)}")
 
-    def download_full_dataset(csv_file, data_dir, server_address="http://188.251.214.6:7270"):
-        """Downloads all files listed in the CSV from the server if they are not already in data_dir."""
-        data_frame = pd.read_csv(csv_file)
-        files = data_frame['filename'].values
 
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
+    def download_chunks(data_dir, server_adr):
+        try:
 
-        for file in files:
-            file_path = os.path.join(data_dir, file)
-            if not os.path.exists(file_path):
-                download_url = f"{server_address}/download/{file}"
-                response = requests.get(download_url)
-                if response.status_code == 200:
-                    with open(file_path, 'wb') as f:
+            os.makedirs(data_dir, exist_ok=True)
+            with open('downloaded_chunks', 'r') as chunkline:
+                chunknumber = int(chunkline.readline().strip())
+
+            if chunknumber >= 51:
+                print("All chunks downloaded, skipping step...")
+                return
+
+            while chunknumber < 51:
+                try:
+
+                    download_url = f"{server_adr}/download_chunk?chunk_number={chunknumber + 1}"
+                    print(f"Downloading chunk_{chunknumber + 1} ")
+
+                    response = requests.get(download_url, timeout=60)
+                    response.raise_for_status()
+
+                    zip_file_path = os.path.join(data_dir, f"chunk_{chunknumber + 1}.zip")
+                    with open(zip_file_path, 'wb') as f:
                         f.write(response.content)
-                    print(f"Downloaded: {file}")
-                else:
-                    print(f"Failed to download {file} (status code: {response.status_code})")
+                    print(f"Downloaded chunk {chunknumber + 1}")
+
+                    try:
+                        with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                            zip_ref.extractall(data_dir)
+                        print(f"Decompressed chunk {chunknumber + 1}")
+
+
+                        os.remove(zip_file_path)
+                        chunknumber += 1
+
+                        with open('downloaded_chunks', 'w') as chunkline:
+                            chunkline.write(str(chunknumber))
+
+                    except zipfile.BadZipFile:
+                        print(f"Corrupted zip file for chunk {chunknumber + 1}. Removing and retrying.")
+                        if os.path.exists(zip_file_path):
+                            os.remove(zip_file_path)
+                        continue
+
+                except requests.exceptions.RequestException as e:
+                    print(f"Failed to download chunk {chunknumber + 1}: {e}")
+
+                    time.sleep(2)
+                    continue
+
+        except FileNotFoundError:
+            print("No download tracking file found. Creating new one...")
+            with open("downloaded_chunks", 'w') as file:
+                file.write('0')
+            download_chunks(data_dir, server_adr)
+
+    data_dir = 'SmallerParsedReplays'
+    server_adr = "http://188.251.214.6:7270"
+    download_chunks(data_dir, server_adr)
+
+
+
+
 
     class OsuReplayDataset(Dataset):
         def __init__(self, csv_file, data_dir, button_encoder=None, scaler=None, segment_size=1000, overlap_size=500,
@@ -51,7 +96,6 @@ if __name__ == "__main__":
             self.is_test = is_test
             self.log_file = log_file
 
-            # Load the CSV file
             self.data_frame = pd.read_csv(csv_file)
 
             if not all(col in self.data_frame.columns for col in
@@ -63,7 +107,6 @@ if __name__ == "__main__":
             self.labels = self.data_frame[['class_normal', 'class_relax', 'class_frametime']].values.astype(np.float32)
 
 
-            # Initialize button encoder
             if button_encoder is None:
                 self.button_encoder = LabelEncoder()
                 all_buttons = []
@@ -79,7 +122,6 @@ if __name__ == "__main__":
             else:
                 self.button_encoder = button_encoder
 
-            # Initialize scaler
             if scaler is None:
                 self.scaler = StandardScaler()
                 self._initialize_scaler(data_dir)
@@ -140,7 +182,7 @@ if __name__ == "__main__":
                 if torch.isnan(segment).any() or torch.isinf(segment).any():
                     raise ValueError(f"NaN or infinite values found in file {file}")
             except Exception as e:
-                # Write the file name to the log file when an error occurs
+
                 with open(self.log_file, 'a') as log_f:
                     log_f.write(f"{file}\n")
                 print(f"Error processing file {file}: {e}")
@@ -157,7 +199,7 @@ if __name__ == "__main__":
 
 
     def stratified_split(dataset, test_size=0.2):
-        # Flatten the labels array
+
         flattened_labels = [tuple(label) for label in dataset.labels]
 
         df = pd.DataFrame({
@@ -176,7 +218,7 @@ if __name__ == "__main__":
 
     if not os.listdir(data_dir):  # Check if directory is empty
         print("Data directory is empty. Downloading dataset...")
-        download_full_dataset(csv_file, data_dir)
+        download_chunks(data_dir, server_adr)
 
     # Load the dataset
     dataset = OsuReplayDataset(csv_file, data_dir)
@@ -196,14 +238,14 @@ if __name__ == "__main__":
             self.dropout = nn.Dropout(dropout)
 
         def forward(self, x):
-            # Initialize hidden states using zeros
+
             h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)
             c0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)
 
             out, _ = self.lstm(x, (h0, c0))  # LSTM layer
-            out = self.dropout(out[:, -1, :])  # Dropout and keep the last output of the LSTM
+            out = self.dropout(out[:, -1, :])
             out = self.fc(out)  # Fully connected layer
-            return torch.sigmoid(out)  # Apply sigmoid for multilabel classification
+            return torch.sigmoid(out)
 
     input_size = 6
     hidden_size = 64
@@ -236,17 +278,17 @@ if __name__ == "__main__":
     DATABASE_URL = "postgresql+psycopg2://osuvendetta:osuvendetta@188.251.214.6:5432/optuna_study_db"
 
 
- 
-    study_name = "64x2FirstRun"  
+    # Distributed Optuna study setup
+    study_name = "64x2FirstRun"
     study = optuna.create_study(
         study_name=study_name,
-        storage=DATABASE_URL,  
+        storage=DATABASE_URL,
         direction='maximize',
-        load_if_exists=True  
+        load_if_exists=True
     )
 
     def objective(trial: Trial):
-        
+        # Sample hyperparameters using Optuna's updated methods
         lr = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
         weight_decay = trial.suggest_float('weight_decay', 1e-6, 1e-1, log=True)
         dropout = trial.suggest_float('dropout', 0.2, 0.5)
@@ -254,7 +296,7 @@ if __name__ == "__main__":
         scheduler_patience = trial.suggest_int('scheduler_patience', 3, 10)
         scheduler_min_lr = trial.suggest_float('scheduler_min_lr', 1e-7, 1e-5, log=True)
 
-        
+
         model = BiLSTMModel(input_size, hidden_size, output_size, num_layers, dropout=dropout).to(device)
         criterion = nn.BCELoss()
         optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -264,7 +306,7 @@ if __name__ == "__main__":
 
         best_f1 = 0.0
 
-        
+        # Training loop with Optuna
         for epoch in range(num_epochs):
             model.train()
             running_loss = 0.0
@@ -286,7 +328,7 @@ if __name__ == "__main__":
                     running_loss += loss.item()
                     pbar.set_postfix({'loss': running_loss / (i + 1)})
 
-           
+            # Evaluation phase
             model.eval()
             test_loss = 0.0
             true_labels = []
@@ -304,25 +346,25 @@ if __name__ == "__main__":
             test_loss /= len(test_dataloader)
             f1 = f1_score(true_labels, pred_labels, average='micro')
 
-          
+            # Update best F1 score
             if f1 > best_f1:
                 best_f1 = f1
 
-            
+            # Step the scheduler
             scheduler.step(f1)
 
-       
+        # Report the best F1 score to Optuna
         trial.report(best_f1, epoch)
+
 
         if trial.should_prune():
             raise optuna.TrialPruned()
 
         return best_f1
 
-    
-    study.optimize(objective, n_trials=1000)  
 
-    
+    study.optimize(objective, n_trials=1000)  # Each machine can independently contribute to this
+
     print("Best trial:")
     trial = study.best_trial
     print(f"Best F1 Score: {trial.value}")
