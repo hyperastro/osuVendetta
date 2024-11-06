@@ -3,6 +3,7 @@
 set "PYTHON_ZIP=python-3.11.0-embed-amd64.zip"
 set "GET_PIP=get-pip.py"
 set "PYTHON_INSTALL_PATH=%~dp0Python311"
+set "SCRIPTS_PATH=%PYTHON_INSTALL_PATH%\Scripts"
 
 :: Check if Python is installed locally
 if exist "%PYTHON_INSTALL_PATH%\python.exe" (
@@ -45,43 +46,9 @@ if exist "%PYTHON_INSTALL_PATH%\python.exe" (
     del "%PYTHON_ZIP%"
 )
 
-:: Create directories for packages if needed
+:: Ensure directories for packages are present
 if not exist "%PYTHON_INSTALL_PATH%\Lib" mkdir "%PYTHON_INSTALL_PATH%\Lib"
 if not exist "%PYTHON_INSTALL_PATH%\Lib\site-packages" mkdir "%PYTHON_INSTALL_PATH%\Lib\site-packages"
-if not exist "%PYTHON_INSTALL_PATH%\DLLs" mkdir "%PYTHON_INSTALL_PATH%\DLLs"
-
-:: Download full Python distribution for necessary files
-echo Downloading full Python distribution...
-set "PYTHON_FULL_ZIP=python-3.11.0-amd64.exe"
-if not exist "%PYTHON_FULL_ZIP%" (
-    powershell -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.11.0/%PYTHON_FULL_ZIP%' -OutFile '%PYTHON_FULL_ZIP%'"
-)
-
-:: Extract necessary files from full distribution
-echo Extracting required files...
-"%PYTHON_FULL_ZIP%" /quiet /layout "%TEMP%\python_full"
-xcopy /E /I /Y "%TEMP%\python_full\Lib" "%PYTHON_INSTALL_PATH%\Lib"
-xcopy /E /I /Y "%TEMP%\python_full\DLLs" "%PYTHON_INSTALL_PATH%\DLLs"
-
-:: Clean up temporary files
-rmdir /S /Q "%TEMP%\python_full"
-del "%PYTHON_FULL_ZIP%"
-
-:: Create python311._pth file with correct paths
-echo Creating Python path configuration...
-(
-echo python311.zip
-echo .
-echo Lib\site-packages
-echo .
-echo import site
-)> "%PYTHON_INSTALL_PATH%\python311._pth"
-
-:: Set PYTHONPATH environment variable
-set "PYTHONPATH=%PYTHON_INSTALL_PATH%\Lib;%PYTHON_INSTALL_PATH%\DLLs;%PYTHON_INSTALL_PATH%\Lib\site-packages"
-
-:: Confirm Python path
-echo Using local Python installation at: %PYTHON_PATH%
 
 :: Download get-pip.py if it doesn't exist
 if not exist "%GET_PIP%" (
@@ -100,6 +67,15 @@ if ERRORLEVEL 1 (
 
 :: Remove get-pip.py after pip installation
 del "%GET_PIP%"
+
+:: Add Scripts directory to PATH to access pip
+set "PATH=%SCRIPTS_PATH%;%PATH%"
+
+:: Create pythonXX._pth file to ensure the site-packages are recognized
+echo # Uncommented _pth file configuration to enable site-packages >> "%PYTHON_INSTALL_PATH%\python311._pth"
+echo Lib\ >> "%PYTHON_INSTALL_PATH%\python311._pth"
+echo Lib\site-packages >> "%PYTHON_INSTALL_PATH%\python311._pth"
+echo %SCRIPTS_PATH% >> "%PYTHON_INSTALL_PATH%\python311._pth"
 
 :: Install dependencies using python -m pip
 echo Installing dependencies from requirements.txt...
