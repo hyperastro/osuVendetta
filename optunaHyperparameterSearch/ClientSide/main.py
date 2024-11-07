@@ -67,7 +67,7 @@ def Lowpowermode(): #low power might remove it later its kinda unproductive beca
     return num_workers,batchsize
 
 
-def customsettings(): #custom setting ik its a bit spaghetti sorry to however trys to read it
+def customsettings(): #custom setting ik its a bit spaghetti sorry to who ever tries to read it
     global num_workers
     global batchsize
     print(f"recommended a batchsize of {batchsize}, and a thread count of {num_workers}")
@@ -88,7 +88,7 @@ def customsettings(): #custom setting ik its a bit spaghetti sorry to however tr
 
 
 
-def download_chunks(data_dir, server_adr): #download chunks func as you can guess it download missing chunks fo the dataset
+def download_chunks(data_dir, server_adr): #download chunks func as you can guess it download missing chunks for the dataset
     try:
 
         os.makedirs(data_dir, exist_ok=True)
