@@ -18,21 +18,77 @@ import time
 import zipfile
 
 
+
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-data_dir = 'SmallerParsedReplays'
+data_dir = '/SmallerParsedReplays'
 csv_file = 'newcsvfile2small.csv'
 study_name = "64x2FirstRun"
 server_adr = "http://188.251.214.6:7270"
 DATABASE_URL = "postgresql+psycopg2://osuvendetta:osuvendetta@188.251.214.6:5432/optuna_study_db"
 
-# Dataset setup flags
+# Dataset setup flag
 dataset_initialized = False
 study_initialized = False
 init_done_file = os.path.join(data_dir, '.init_done')
 
+def DetermineBatchSize():
+    freemem = torch.cuda.mem_get_info()[0] / 1024 ** 3
+    if freemem < 8: #less than 8Gb of Vram
+        return 128
+    elif freemem < 12:#less than 12Gb of Vram
+        return 256
+    elif freemem < 17: #less than 17Gb of Vram
+        return 512
+    else:
+        return 1024 #anything else (this wont be used unless u have a rtx 4090 or something)
 
-def download_chunks(data_dir, server_adr):
+
+
+def Normal(): #full power mode
+    global num_workers
+    global batchsize
+    num_workers = num_workers
+    batchsize = batchsize
+    return num_workers,batchsize
+
+def Halfpower(): #half power ....
+    global num_workers
+    global batchsize
+    num_workers = round(num_workers/2)
+    batchsize = batchsize/2
+    return num_workers,batchsize
+
+def Lowpowermode(): #low power might remove it later its kinda unproductive because of the low batch size
+    global num_workers
+    global batchsize
+    num_workers = round(num_workers/4)
+    batchsize = round(batchsize/4)
+    return num_workers,batchsize
+
+
+def customsettings(): #custom setting ik its a bit spaghetti sorry to however trys to read it
+    global num_workers
+    global batchsize
+    print(f"recommended a batchsize of {batchsize}, and a thread count of {num_workers}")
+    batchsize = int(input("Insert custom batchsize: "))
+    num_workers = int(input("Insert custom thread count: "))
+    if batchsize > DetermineBatchSize():
+        print(f"Warning custom batch size of {batchsize} is bigger than recommended batch size of {DetermineBatchSize()}")
+    currentcpucount = multiprocessing.cpu_count()
+    if num_workers > currentcpucount:
+        print(f"Warining custom thread count {num_workers} exceeds cpu core count {currentcpucount}")
+    return num_workers,batchsize
+
+
+
+
+
+
+
+
+
+def download_chunks(data_dir, server_adr): #download chunks func as you can guess it download missing chunks fo the dataset
     try:
 
         os.makedirs(data_dir, exist_ok=True)
@@ -87,15 +143,6 @@ def download_chunks(data_dir, server_adr):
         download_chunks(data_dir, server_adr)
 
 
-def DetermineBatchSize():
-    freemem = torch.cuda.mem_get_info()[0] / 1024 ** 3
-    totalmem = torch.cuda.mem_get_info()[1] / 1024 ** 3
-    print(f"{freemem}GB of VRAM Free")
-    print(f"Total of {totalmem}GB of VRAM on device")
-    if freemem < 6:
-        return 128
-    else:
-        return 256
 
 
 
@@ -109,7 +156,7 @@ class OsuReplayDataset(Dataset):
         self.log_file = log_file
         self.data_frame = pd.read_csv(csv_file)
 
-        
+        # Ensure the necessary columns are in the CSV file
         required_columns = ['filename', 'class_normal', 'class_relax', 'class_frametime']
         if not all(col in self.data_frame.columns for col in required_columns):
             raise ValueError(f"CSV file must contain {required_columns} columns.")
@@ -126,10 +173,10 @@ class OsuReplayDataset(Dataset):
         file_path = os.path.join(self.data_dir, f"{os.path.splitext(file)[0]}.npy")
 
         try:
-            
+            # Load preprocessed data from the .npy file
             data = np.load(file_path)
 
-            
+            # Segmenting the data
             segments = []
             for start in range(0, len(data) - self.segment_size + 1, self.segment_size - self.overlap_size):
                 end = start + self.segment_size
@@ -142,11 +189,12 @@ class OsuReplayDataset(Dataset):
             if not segments:
                 raise ValueError(f"No valid segments in file {file}")
 
+            # Select a random segment
             segment = torch.tensor(segments[np.random.randint(len(segments))], dtype=torch.float32)
             if torch.isnan(segment).any() or torch.isinf(segment).any():
                 raise ValueError(f"NaN or infinite values found in file {file}")
         except Exception as e:
-            
+            # Log any file processing issues
             with open(self.log_file, 'a') as log_f:
                 log_f.write(f"{file}\n")
             print(f"Error processing file {file}: {e}")
@@ -249,21 +297,52 @@ def initialize_study():
 
 if __name__ == "__main__":
 
+
+    def performancesettings(): #handles all of the UI logic 
+        global num_workers
+        global batchsize
+        validinput = False
+        while validinput == False:
+            print(f"Choose performance settings(1-4):\n (1)Normal Perfomance(full computer utilization) \n (2)Half-power \n (3)Low-power \n (4)Custom settings ")
+            useroption = int(input(f"chose a option (1-4): "))
+            if useroption == 1: 
+                print(f"Normal perfomance chosen")
+                return num_workers,batchsize
+            elif useroption == 2:
+                print(f"Half-power chosen")
+                validinput = True
+                Halfpower()
+            elif useroption == 3:
+                print(f"Low-power chosen")
+                validinput = True
+                Lowpowermode()
+            elif useroption == 4:
+                validinput =True
+                customsettings()
+            else:
+                print(f"Invalid input make sure its 1-4")
+
+
+
     download_chunks(data_dir,server_adr)
-    personalizedbatchsize = DetermineBatchSize()
     dataset = initialize_dataset()
+    batchsize = DetermineBatchSize()
+    num_workers = multiprocessing.cpu_count()
+    print(f"{torch.cuda.mem_get_info()[0] / 1024 ** 3}GB of VRAM Free")
+    print(f"Total of {torch.cuda.mem_get_info()[1] / 1024 ** 3}GB of VRAM on device")
+    performancesettings()
     if dataset is not None:
         train_dataset, test_dataset = stratified_split(dataset)
-        num_workers = multiprocessing.cpu_count()
-        train_dataloader = DataLoader(train_dataset, batch_size=personalizedbatchsize, shuffle=True,
+        train_dataloader = DataLoader(train_dataset, batch_size=batchsize, shuffle=True,
                                       collate_fn=collate_fn, num_workers=round(num_workers/2), persistent_workers=True,
                                       pin_memory=True)
-        test_dataloader = DataLoader(test_dataset, batch_size=personalizedbatchsize, shuffle=False,
+        test_dataloader = DataLoader(test_dataset, batch_size=batchsize, shuffle=False,
                                      collate_fn=collate_fn, num_workers=round(num_workers/2), persistent_workers=True,
                                      pin_memory=True)
 
 
     def objective(trial: Trial):
+        # Sample hyperparameters using Optuna's updated methods
         lr = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
         weight_decay = trial.suggest_float('weight_decay', 1e-6, 1e-1, log=True)
         dropout = trial.suggest_float('dropout', 0.2, 0.5)
@@ -271,7 +350,7 @@ if __name__ == "__main__":
         scheduler_patience = trial.suggest_int('scheduler_patience', 3, 10)
         scheduler_min_lr = trial.suggest_float('scheduler_min_lr', 1e-7, 1e-5, log=True)
 
-     
+        # Model, loss function, optimizer, and scheduler setup
         model = BiLSTMModel(input_size, hidden_size, output_size, num_layers, dropout=dropout).to(device)
         criterion = nn.BCELoss()
         optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -281,6 +360,7 @@ if __name__ == "__main__":
 
         best_f1 = 0.0
 
+        # Training loop with Optuna
         for epoch in range(num_epochs):
             model.train()
             running_loss = 0.0
@@ -303,7 +383,7 @@ if __name__ == "__main__":
                     running_loss += loss.item()
                     pbar.set_postfix({'loss': running_loss / (i + 1)})
 
-            
+            # Evaluation phase
             model.eval()
             test_loss = 0.0
             true_labels = []
@@ -321,14 +401,14 @@ if __name__ == "__main__":
             test_loss /= len(test_dataloader)
             f1 = f1_score(true_labels, pred_labels, average='micro')
 
-           
+            # Update best F1 score
             if f1 > best_f1:
                 best_f1 = f1
 
-            
+            # Step the scheduler
             scheduler.step(f1)
 
-       
+        # Report the best F1 score to Optuna
         trial.report(best_f1, epoch)
 
         if trial.should_prune():
@@ -337,7 +417,7 @@ if __name__ == "__main__":
         return best_f1
 
 
-    
+    # Initialize study only once
     study = initialize_study()
     study.optimize(objective, n_trials=1000, n_jobs=1)
 
@@ -348,7 +428,7 @@ if __name__ == "__main__":
     num_layers = 2
     model = BiLSTMModel(input_size, hidden_size, output_size, num_layers).to(device)
 
-    
+    # Optuna study initialization and optimization
     DATABASE_URL = "postgresql+psycopg2://osuvendetta:osuvendetta@188.251.214.6:5432/optuna_study_db"
     study_name = "64x2FirstRun"
     study = optuna.create_study(
