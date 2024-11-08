@@ -1,18 +1,27 @@
 ﻿.splash-container {
     position: fixed;
-
     display: flex;
     flex-direction: column;
     /*align-content:center;*/
     /*justify-content: center;*/
-    background-color: rgba(55, 55, 55, 0.75);
+    background-color: rgba(55, 55, 55, 1);
     color: white;
-
     height: 100vh;
     width: 100vw;
-
-    z-index: 100;
+    z-index: 9999;
     padding-top: 5%;
+}
+
+.splash-text-container {
+    align-self: center;
+    display: flex;
+}
+
+.splash-title {
+    align-self: center;
+    text-align: center;
+    border-bottom: 1px solid black;
+    width: 50%;
 }
 
 .splash-text {
@@ -30,7 +39,7 @@
 }
 
 .splash-loader-container {
-    margin-top:15px;
+    margin-top: 15px;
     display: flex;
     justify-content: center;
 }
@@ -39,9 +48,31 @@
     border: 16px solid #f3f3f3; /* Light grey */
     border-top: 16px solid #3498db; /* Blue */
     border-radius: 50%;
-    width: 120px;
-    height: 120px;
+    width: 40px;
+    height: 40px;
     animation: splash-spin 2s linear infinite;
+}
+
+.splash-progress-bar {
+    width: 50%;
+    height: 32px;
+    background: black;
+    border: 1px solid gray;
+    border-radius: 10px;
+}
+
+.splash-progress-bar-inner {
+    background: gray;
+    height: 26px;
+    margin: 2px;
+    border-radius: 10px;
+}
+
+.splash-progress-bar-value {
+    height: 26px;
+    width: 0%;
+    background: green;
+    border-radius: 10px;
 }
 
 @keyframes splash-spin {

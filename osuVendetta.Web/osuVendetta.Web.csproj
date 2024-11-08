@@ -8,20 +8,31 @@
 
 
   <ItemGroup>
-    <ProjectReference Include="..\osuvendetta.Web.Client\osuVendetta.Web.Client.csproj" />
-    <PackageReference Include="Blazr.RenderState.Server" Version="1.0.0" />
+    <ProjectReference Include="..\osuVendetta.Web.Client\osuVendetta.Web.Client.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.*" />
   </ItemGroup>
 
 
   <ItemGroup>
-    <Content Update="wwwroot\favicon.ico">
+    <Content Update="wwwroot\antiCheat\192x2.onnx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Update="wwwroot\logo.png">
+    <Content Update="wwwroot\antiCheat\192x2Config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Update="wwwroot\onnx\192x2.onnx">
+    <Content Update="wwwroot\antiCheat\antiCheat.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\antiCheat\antiCheat.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\antiCheat\replayResultCard.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\splash\splash.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\splash\splash.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

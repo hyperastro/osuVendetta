@@ -1,0 +1,67 @@
+﻿@using System.Diagnostics
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<link href="/splash/splash.css" rel="stylesheet" />
+<script src="/splash/splash.js" type="text/javascript"></script>
+
+<div id="splash-screen" class="splash-container">
+    <div class="splash-title">
+        <h2>osu!Vendetta</h2>
+        <h3>AI Powered Anti-Cheat for osu!</h3>
+    </div>
+    <br />
+    <br />
+    <span class="splash-text">
+        Please wait while we are loading the required files. <br />
+    </span>
+    <div class="splash-text-container">
+        <div class="splash-text" id="load-percentage">
+            0%
+        </div>
+    </div>
+    <div class="splash-loader-container">
+        <div class="splash-progress-bar">
+            <div class="splash-progress-bar-inner">
+                <div id="splash-progress-bar-value" class="splash-progress-bar-value">
+                </div>
+            </div>
+        </div>
+    </div>
+    <span class="splash-text-sub">
+        (This might take a few seconds depending on your network connection)
+    </span>
+    @if (IsDebugMode)
+    {
+        <span class="splash-text-debug">
+            (DEBUG MODE: loading will take longer than in release!)
+        </span>
+    }
+</div>
+
+@code {
+    public bool IsDebugMode
+#if DEBUG
+    => true;
+#else
+    => false;
+#endif
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        double loadPercentage = await JSRuntime.InvokeAsync<double>("getLoadPercentage");
+
+        if (loadPercentage == 100)
+        {
+            if (OperatingSystem.IsBrowser())
+            {
+                await JSRuntime.InvokeVoidAsync("hideSplashScreen");
+            }
+            else
+            {
+                // refresh page so we end up on wasm context
+                Navigation.Refresh(true);
+            }
+        }
+    }
+}

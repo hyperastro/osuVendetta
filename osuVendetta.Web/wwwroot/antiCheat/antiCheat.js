@@ -7,7 +7,11 @@
         const feeds = { input: new ort.Tensor('float32', inputData, dimensions) };
         const results = await this.session.run(feeds);
         const output = results.output.data;
-        
+
         return output;
+    },
+
+    unload: async function () {
+
     }
 }

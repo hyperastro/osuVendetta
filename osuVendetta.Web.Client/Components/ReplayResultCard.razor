@@ -1,0 +1,29 @@
+﻿<link href="/antiCheat/replayResultCard.css" rel="stylesheet" />
+
+@if (CardEntry is not null)
+{
+    Color color = CardEntry.ProbabilityOfCheating >= 50 ? Color.Error : Color.Success;
+
+    <div class="rrc-container-top">
+        <MudPaper class="rrc-container">
+            <MudText Class="rrc-filename">@CardEntry.ReplayFileName</MudText>
+            <div class="rrc-metadata">
+                <MudText>Played by <b>@CardEntry.PlayerName</b></MudText>
+            </div>
+            <div class="rrc-probability-text-container">
+                <MudText Class="rrc-probability-text">Probability of cheating: @CardEntry.ProbabilityOfCheating %</MudText>
+            </div>
+            <div class="rrc-probability">
+                <MudProgressLinear Color="color" Size="Size.Medium" Value="@CardEntry.ProbabilityOfCheating" />
+            </div>
+            <div class="rrc-footer">
+                <MudText Class="rrc-footer-text">Played on @CardEntry.ReplayDate</MudText>
+            </div>
+        </MudPaper>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public ReplayResultCardEntry? CardEntry { get; set; }
+}

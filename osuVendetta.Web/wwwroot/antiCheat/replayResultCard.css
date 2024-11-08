@@ -1,0 +1,43 @@
+﻿.rrc-container-top {
+    width: 30%;
+    margin-right: 15px;
+    border: 2px solid gray;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+﻿.rrc-container {
+    padding: 5px;
+    border: 5px outset lightgray;
+    border-radius: 15px;
+    color: white;
+}
+
+.rrc-filename {
+    color: cyan;
+    border-bottom: 2px solid gray;
+    margin-bottom: 5px;
+}
+
+.rrc-metadata {
+    color: white;
+}
+.rrc-probability-text-container {
+    margin-top: 10px;
+}
+
+.rrc-probability-text {
+}
+
+.rrc-probability {
+    margin-bottom: 25px;
+}
+
+.rrc-footer {
+    text-align: end;
+    border-top: 1px solid gray;
+}
+
+.rrc-footer-text {
+    font-size: 14px;
+}

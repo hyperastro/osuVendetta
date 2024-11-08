@@ -1,36 +1,47 @@
-ï»¿@page "/anticheat"
-@using System.Diagnostics
-@using osuVendetta.Core.AntiCheat
-@using osuVendetta.Core.AntiCheat.Data
-@using osuVendetta.Web.Client.AntiCheat
+@page "/anticheat"
 @using OsuParsers.Decoders
-@using OsuParsers.Enums
-@using OsuParsers.Enums.Replays
 @using OsuParsers.Replays
-@using OsuParsers.Replays.Objects
-@using static osuVendetta.Web.Client.Pages.ReplayResultCard
-@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
-@inject IAntiCheatService AntiCheatService
+@using osuVendetta.Core.AntiCheat.Data
+@using osuVendetta.CoreLib.AntiCheat.Data
+@using osuVendetta.Web.Client.Components
+@using osuVendetta.Web.Client.Services
 @inject ISnackbar Snackbar
-
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+@inject IAntiCheatConfigProvider ConfigProvider
+@inject IAntiCheatService AntiCheatService
 
 <PageTitle>Anticheat</PageTitle>
 
+<link href="/antiCheat/antiCheat.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+<script src="/antiCheat/antiCheat.js" type="text/javascript"></script>
+
 <MudAlert Severity="Severity.Warning">
-    â€¢ This model is in its <b>ALPHA</b> phase with current accuracy around 93%. <br />
-    â€¢ Do <b>NOT</b> rely solely on the model's output; double-check findings independently. <br />
+    • This model is in its <b>ALPHA</b> phase with current accuracy around 93%. <br />
+    • Do <b>NOT</b> rely solely on the model's output; double-check findings independently.
 </MudAlert>
+
+@if (ModelVersion is not null)
+{
+    <MudAlert Severity="Severity.Info">
+        • Model: @ModelVersion.DisplayText <br />
+        • Model Version: @($"{ModelVersion.Major}.{ModelVersion.Minor}")
+    </MudAlert>
+}
 
 <div>
     <MudStack Style="width: 100%;position: relative; color: antiquewhite;">
-        <MudOverlay Visible="@IsFileProcessingOverlayVisible" Style="background: rgba(1,1,1,0.75); z-index:50" Absolute="true">
+
+        <MudOverlay Visible="@IsFileProcessingOverlayVisible" 
+                    Style="background: rgba(1,1,1,0.75); z-index:50" 
+                    Absolute="true">
+
             <MudText>Currently processing files</MudText>
             <MudText>@FileCurrentlyProcessed (@FilesProcessed/@FilesToProcessTotal)</MudText>
-            <MudProgressLinear Max="@FilesToProcessTotal" Size="Size.Large" Value="@FilesProcessed" />
+            <MudProgressLinear Max="@FilesToProcessTotal" 
+                               Size="Size.Large" 
+                               Value="@FilesProcessed" />
         </MudOverlay>
+
         <MudFileUpload T="IReadOnlyList<IBrowserFile>"
                        @ref="FileUpload"
                        MaximumFileCount="50"
@@ -44,43 +55,40 @@
                        @ondragenter="@SetUploadDragClass"
                        @ondragleave="@ClearUploadDragClass"
                        @ondragend="@ClearUploadDragClass">
+
             <ActivatorContent>
-          <MudPaper Height="300px"
-          Outlined="true"
-          Class="@DragClass"
-          Style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px;">
-    <MudText Typo="Typo.h6" Style="grid-column: span 2; text-align: center;">
-        Drag and drop files here or click
-    </MudText>
-    @for (int i = 0; i < FileNames.Count; i++)
-    {
-        <MudChip T="string"
-                 Color="Color.Dark"
-                 Text="@FileNames[i]"
-                 tabindex="-1"
-                 Style="@GetGridStyle(i)" />
-    }
-</MudPaper>
+                <MudPaper Height="300px"
+                        Outlined="true"
+                        Class="@DragClass"
+                        Style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px;">
 
-@code {
-    private string GetGridStyle(int index)
-    {
-        int row = (index % 5) + 2;  // Calculate the row (start from row 2 to align with your example)
-        int column = (index / 5) + 1; // Calculate the column (1 or 2)
-        return $"grid-row: {row}; grid-column: {column};";
-    }
-}
+                    <MudText Typo="Typo.h6" 
+                             Style="grid-column: span 2; text-align: center;">
+                        Drag and drop files here or click
+                    </MudText>
 
-            </ActivatorContent>
-        </MudFileUpload>
-        <MudToolBar Gutters="@false"
-                    Class="relative d-flex justify-end gap-4">
+                @for (int i = 0; i < FileNames.Count; i++)
+                {
+                    <MudChip T="string"
+                                Color="Color.Dark"
+                                Text="@FileNames[i]"
+                                tabindex="-1"
+                                Style="@GetGridStyle(i)" />
+                }
+            </MudPaper>
+    </ActivatorContent>
+</MudFileUpload>
+
+<MudToolBar Gutters="@false"
+            Class="relative d-flex justify-end gap-4">
+
             <MudButton Color="Color.Primary"
                        Disabled="@(!FileNames.Any())"
                        OnClick="@UploadAsync"
                        Variant="Variant.Filled">
                 Upload
             </MudButton>
+
             <MudButton Color="Color.Error"
                        Disabled="@(!FileNames.Any())"
                        OnClick="@ClearUploadAsync"
@@ -91,20 +99,31 @@
     </MudStack>
 </div>
 
-<MudStack Row="true" Wrap="Wrap.Wrap" Justify="Justify.SpaceAround">
-    @foreach (ReplayResultCardModel resultCard in AntiCheatResults)
-    {
-        <ReplayResultCard DisplayData="resultCard" />
-    }
-</MudStack>
+<br />
+<MudDivider />
+<br />
 
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-<script src="/onnx/onnxHelper.js"></script>
+<div class="anticheat-result-grid">
+    @for (int i = 0; i < ResultCards.Count;)
+    {
+        // builds a N by 3 grid
+        <div class="anticheat-result-row">
+            @for (int col = 0; col < 3 && i < ResultCards.Count; col++, i++)
+            {
+                ReplayResultCardEntry entry = ResultCards[i];
+
+                <ReplayResultCard CardEntry="entry" />
+            }
+        </div>
+    }
+</div>
 
 @code {
     const string DEFAULT_DRAG_CLASS = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full";
     const string ONNX_JS_INTEROP_FUNC = "onnxInterop.run";
     const string ONNX_MODEL_PATH = @"/api/File";
+
+    public readonly List<ReplayResultCardEntry> ResultCards = [];
 
     // FileUpload is set in html
     public MudFileUpload<IReadOnlyList<IBrowserFile>> FileUpload;
@@ -116,9 +135,27 @@
     public int FilesProcessed;
     public string? FileCurrentlyProcessed;
 
-    public readonly List<ReplayResultCardModel> AntiCheatResults = new List<ReplayResultCardModel>();
+    public ModelVersion? ModelVersion;
 
     List<IBrowserFile> _filesToUpload = new List<IBrowserFile>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        AntiCheatConfig? config = await ConfigProvider.GetConfig();
+
+        if (config is null)
+            return;
+
+        ModelVersion = config.Version;
+        StateHasChanged();
+    } 
+
+    public string GetGridStyle(int index)
+    {
+        int row = (index % 5) + 2;  // Calculate the row (start from row 2 to align with your example)
+        int column = (index / 5) + 1; // Calculate the column (1 or 2)
+        return $"grid-row: {row}; grid-column: {column};";
+    }
 
     public async Task ClearUploadAsync()
     {
@@ -152,7 +189,7 @@
 
     public async Task UploadAsync()
     {
-        AntiCheatResults.Clear();
+        ResultCards.Clear();
         Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
         Snackbar.Configuration.RequireInteraction = true;
 
@@ -168,52 +205,44 @@
 
             StateHasChanged();
 
-            using Stream fileStream = file.OpenReadStream();
-            using MemoryStream replayStream = new MemoryStream();
-            await fileStream.CopyToAsync(replayStream, (int)file.Size);
-
-            replayStream.Seek(0, SeekOrigin.Begin);
-
             try
             {
-                AntiCheatResult? result = await AntiCheatService.ProcessReplayAsync(replayStream,
-                new ModelProviderArgs(ONNX_MODEL_PATH, ONNX_JS_INTEROP_FUNC));
+                using Stream fileStream = file.OpenReadStream();
+                using MemoryStream replayStream = new MemoryStream();
+                await fileStream.CopyToAsync(replayStream, (int)file.Size);
 
-                if (result is null)
+                replayStream.Seek(0, SeekOrigin.Begin);
+
+                Replay replay = ReplayDecoder.Decode(replayStream);
+
+                BaseAntiCheatResult result = await AntiCheatService.ProcessReplayAsync(replay, false);
+
+                if (result is AntiCheatResult antiCheatResult)
                 {
-                    Snackbar.Add($"Invalid replay: {file.Name}");
-                    return;
-                    // continue;
+                    ReplayResultCardEntry resultCard = new ReplayResultCardEntry
+                    {
+                        ProbabilityOfCheating = 100 - antiCheatResult.CheatProbability.Normal,
+                        PlayerName = replay.PlayerName ?? "Unkown Player",
+                        ReplayDate = replay.ReplayTimestamp,
+                        ReplayFileName = file.Name,
+                    };
+
+                    ResultCards.Add(resultCard);
                 }
-
-                string normalProbability = string.Empty;
-                string relaxProbability = string.Empty;
-
-                if (!string.IsNullOrEmpty(result.Message) && result.Type != AntiCheatResultType.Invalid)
+                else
                 {
-                    string[] split = result.Message.Split('/');
-                    normalProbability = split[0];
-                    relaxProbability = split[1];
+                    // Handle error
+                    string errorMessage = result.ToString();
+                    Snackbar.Add($"Invalid replay: {errorMessage}");
                 }
-
-                ReplayResultCardModel resultCard = new ReplayResultCardModel(
-                    file.Name,
-                    result.Metadata?.Player ?? "Unkown Player",
-                    result.Type.ToString(),
-                    result.Type == AntiCheatResultType.Normal ? Color.Success : Color.Error,
-                    result.ProbabilityResult.ProbabilityNormal,
-                    result.ProbabilityResult.ProbabilityRelax);
-
-                AntiCheatResults.Add(resultCard);
-                FilesProcessed++;
-                StateHasChanged();
             }
             catch (Exception ex)
             {
-                FilesProcessed++;
-                StateHasChanged();
                 Snackbar.Add($"An exception occured:\n{ex}");
             }
+
+            FilesProcessed++;
+            StateHasChanged();
         }
 
         await ClearUploadAsync();

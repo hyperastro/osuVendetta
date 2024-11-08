@@ -1,0 +1,22 @@
+{
+  "Version": {
+    "DisplayText": "Onnx 192x2 Alpha Model",
+    "Major": 1,
+    "Minor": 0
+  },
+  "StepsPerChunk": 1000,
+  "StepOverlay": 500,
+  "FeaturesPerStep": 6,
+  "TotalFeatureSizePerChunk": 6000,
+  "ScalerMean": {
+    "DimensionDeltaTime": 7.03284752,
+    "DimensionDeltaX": 0.00209958789,
+    "DimensionDeltaY": 0.0268233697
+  },
+  "ScalerStd": {
+    "DimensionDeltaTime": 562.68982467,
+    "DimensionDeltaX": 27.54802019,
+    "DimensionDeltaY": 27.51032391
+  },
+  "BatchCount": 1
+}

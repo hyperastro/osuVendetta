@@ -1,0 +1,10 @@
+﻿@using osuVendetta.Web.Client.Components
+
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <SplashOverlay />
+
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>
