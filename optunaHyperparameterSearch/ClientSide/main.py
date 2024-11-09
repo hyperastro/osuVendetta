@@ -364,7 +364,7 @@ if __name__ == "__main__":
         model = initialize_model(hidden_size, dropout)
 
         batchsize = determine_batch_size(model)
-        batchsize = round(batchsize/28)
+        batchsize = round(batchsize/26)
         print(f"Calculated batch size: {batchsize}")
         performancesettings()
 
