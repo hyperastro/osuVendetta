@@ -39,3 +39,5 @@ typing_extensions==4.12.2
 tzdata==2024.2
 urllib3==2.2.3
 zstandard==0.23.0
+gdown==5.2.0
+py7zr==0.22.0
