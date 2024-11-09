@@ -21,7 +21,7 @@ import zipfile
 
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-data_dir = '/SmallerParsedReplays'
+data_dir = 'SmallerParsedReplays'
 csv_file = 'newcsvfile2small.csv'
 study_name = "64x2FirstRun"
 server_adr = "http://188.251.214.6:7270"
@@ -41,7 +41,7 @@ def DetermineBatchSize():
     elif freemem < 17: #less than 17Gb of Vram
         return 512
     else:
-        return 1024 #anything else (this wont be used unless u have a rtx 4090 or something)
+        return 1024 #anything else (this won't be used unless u have a rtx 4090 or something)
 
 
 
@@ -295,63 +295,91 @@ def initialize_study():
         print(f"Using an existing study with name '{study_name}'. Skipping new initialization.")
         return optuna.load_study(study_name=study_name, storage=DATABASE_URL)
 
+
+def determine_batch_size(model, max_vram_usage=0.9, min_batch_size=1): #better function to determine batch size dynamicly 
+    
+    # Available VRAM in bytes
+    available_vram = torch.cuda.mem_get_info()[0]
+    model_memory = sum(p.numel() * p.element_size() for p in model.parameters())
+    available_vram *= max_vram_usage  # Limit VRAM usage to a fraction for safety
+    batch_size = available_vram // model_memory  # Estimate batch size based on available memory
+    return max(min_batch_size, int(batch_size))  
+
+
+def initialize_model(hidden_size, dropout=0.2):
+    """Initializes the model based on parameters for memory estimation."""
+    input_size, output_size, num_layers = 6, 3, 2
+    model = BiLSTMModel(input_size, hidden_size, output_size, num_layers, dropout=dropout).to(device)
+    return model
+
+
+def performancesettings():
+    global num_workers, batchsize
+    validinput = False
+    while not validinput:
+        print(
+            f"Choose performance settings(1-4):\n (1)Normal Perfomance(full computer utilization) \n (2)Half-power \n (3)Low-power \n (4)Custom settings ")
+        useroption = int(input(f"choose an option (1-4): "))
+        if useroption == 1:
+            print(f"Normal performance chosen")
+            validinput = True
+        elif useroption == 2:
+            print(f"Half-power chosen")
+            validinput = True
+            Halfpower()
+        elif useroption == 3:
+            print(f"Low-power chosen")
+            validinput = True
+            Lowpowermode()
+        elif useroption == 4:
+            validinput = True
+            customsettings()
+        else:
+            print(f"Invalid input, please choose a number between 1 and 4")
+
+
 if __name__ == "__main__":
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
-    def performancesettings(): #handles all of the UI logic 
-        global num_workers
-        global batchsize
-        validinput = False
-        while validinput == False:
-            print(f"Choose performance settings(1-4):\n (1)Normal Perfomance(full computer utilization) \n (2)Half-power \n (3)Low-power \n (4)Custom settings ")
-            useroption = int(input(f"chose a option (1-4): "))
-            if useroption == 1: 
-                print(f"Normal perfomance chosen")
-                return num_workers,batchsize
-            elif useroption == 2:
-                print(f"Half-power chosen")
-                validinput = True
-                Halfpower()
-            elif useroption == 3:
-                print(f"Low-power chosen")
-                validinput = True
-                Lowpowermode()
-            elif useroption == 4:
-                validinput =True
-                customsettings()
-            else:
-                print(f"Invalid input make sure its 1-4")
-
-
-
-    download_chunks(data_dir,server_adr)
-    dataset = initialize_dataset()
-    batchsize = DetermineBatchSize()
     num_workers = multiprocessing.cpu_count()
-    print(f"{torch.cuda.mem_get_info()[0] / 1024 ** 3}GB of VRAM Free")
-    print(f"Total of {torch.cuda.mem_get_info()[1] / 1024 ** 3}GB of VRAM on device")
-    performancesettings()
+
+    # Dataset loading
+    dataset = initialize_dataset()
     if dataset is not None:
         train_dataset, test_dataset = stratified_split(dataset)
-        train_dataloader = DataLoader(train_dataset, batch_size=batchsize, shuffle=True,
-                                      collate_fn=collate_fn, num_workers=round(num_workers/2), persistent_workers=True,
-                                      pin_memory=True)
-        test_dataloader = DataLoader(test_dataset, batch_size=batchsize, shuffle=False,
-                                     collate_fn=collate_fn, num_workers=round(num_workers/2), persistent_workers=True,
-                                     pin_memory=True)
 
 
-    def objective(trial: Trial):
-        # Sample hyperparameters using Optuna's updated methods
+    def objective(trial: optuna.Trial):
+        global batchsize  
+
+        # Sample hyperparameters
         lr = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
         weight_decay = trial.suggest_float('weight_decay', 1e-6, 1e-1, log=True)
         dropout = trial.suggest_float('dropout', 0.2, 0.5)
         scheduler_factor = trial.suggest_float('scheduler_factor', 0.1, 0.9)
         scheduler_patience = trial.suggest_int('scheduler_patience', 3, 10)
         scheduler_min_lr = trial.suggest_float('scheduler_min_lr', 1e-7, 1e-5, log=True)
+        hidden_size = trial.suggest_int('hidden_size', 64, 128)
 
-        # Model, loss function, optimizer, and scheduler setup
-        model = BiLSTMModel(input_size, hidden_size, output_size, num_layers, dropout=dropout).to(device)
+        model = initialize_model(hidden_size, dropout)
+
+        batchsize = determine_batch_size(model)
+        batchsize = round(batchsize/28)
+        print(f"Calculated batch size: {batchsize}")
+        performancesettings()
+
+        train_dataloader = DataLoader(
+            train_dataset, batch_size=batchsize, shuffle=True,
+            collate_fn=collate_fn, num_workers=round(num_workers / 2),
+            persistent_workers=True, pin_memory=True
+        )
+        test_dataloader = DataLoader(
+            test_dataset, batch_size=batchsize, shuffle=False,
+            collate_fn=collate_fn, num_workers=round(num_workers / 2),
+            persistent_workers=True, pin_memory=True
+        )
+
+        # Training loop setup
         criterion = nn.BCELoss()
         optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
         scheduler = lr_scheduler.ReduceLROnPlateau(
@@ -359,20 +387,18 @@ if __name__ == "__main__":
         )
 
         best_f1 = 0.0
-
-        # Training loop with Optuna
         for epoch in range(num_epochs):
             model.train()
             running_loss = 0.0
             optimizer.zero_grad()
 
+            # Training phase
             with tqdm(enumerate(train_dataloader), total=len(train_dataloader),
                       desc=f'Epoch {epoch + 1}/{num_epochs}') as pbar:
                 for i, (inputs, targets) in pbar:
                     inputs, targets = inputs.to(device), targets.to(device)
                     outputs = model(inputs)
-                    loss = criterion(outputs, targets)
-                    loss = loss / accumulation_steps
+                    loss = criterion(outputs, targets) / accumulation_steps
                     loss.backward()
 
                     if (i + 1) % accumulation_steps == 0:
@@ -386,15 +412,13 @@ if __name__ == "__main__":
             # Evaluation phase
             model.eval()
             test_loss = 0.0
-            true_labels = []
-            pred_labels = []
+            true_labels, pred_labels = [], []
 
             with torch.no_grad():
                 for inputs, targets in test_dataloader:
                     inputs, targets = inputs.to(device), targets.to(device)
                     outputs = model(inputs)
-                    loss = criterion(outputs, targets)
-                    test_loss += loss.item()
+                    test_loss += criterion(outputs, targets).item()
                     true_labels.extend(targets.cpu().numpy())
                     pred_labels.extend((outputs.cpu().numpy() > 0.5).astype(int))
 
@@ -404,48 +428,24 @@ if __name__ == "__main__":
             # Update best F1 score
             if f1 > best_f1:
                 best_f1 = f1
-
-            # Step the scheduler
             scheduler.step(f1)
 
-        # Report the best F1 score to Optuna
         trial.report(best_f1, epoch)
-
         if trial.should_prune():
             raise optuna.TrialPruned()
 
         return best_f1
 
 
-    # Initialize study only once
+    # Main study setup
     study = initialize_study()
     study.optimize(objective, n_trials=1000, n_jobs=1)
 
-    # Model setup
-    input_size = 6
-    hidden_size = 64
-    output_size = 3
-    num_layers = 2
-    model = BiLSTMModel(input_size, hidden_size, output_size, num_layers).to(device)
 
-    # Optuna study initialization and optimization
-    DATABASE_URL = "postgresql+psycopg2://osuvendetta:osuvendetta@188.251.214.6:5432/optuna_study_db"
-    study_name = "64x2FirstRun"
-    study = optuna.create_study(
-        study_name=study_name,
-        storage=DATABASE_URL,
-        direction='maximize',
-        load_if_exists=True
-    )
-    # Run Optuna optimization with single process on Windows for compatibility
-    study.optimize(objective, n_trials=1000, n_jobs=1)
-
+    # Output best results
     print("Best trial:")
     trial = study.best_trial
     print(f"Best F1 Score: {trial.value}")
     print("Best Hyperparameters:")
     for key, value in trial.params.items():
         print(f"{key}: {value}")
-
-
-
