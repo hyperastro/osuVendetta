@@ -3,7 +3,6 @@ import torch.nn as nn
 from tqdm import tqdm
 import torch.optim.lr_scheduler as lr_scheduler
 import optuna
-from optuna.trial import Trial
 import torch.optim as optim
 import multiprocessing
 import os
@@ -13,15 +12,12 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader, Subset
 from sklearn.model_selection import train_test_split
-import requests
-import time
-import zipfile
-
-
+import gdown
+import py7zr
 
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-data_dir = 'SmallerParsedReplays'
+data_dir = 'SmallerParsedReplays/zippedchunksfolder'
 csv_file = 'newcsvfile2small.csv'
 study_name = "64x2FirstRun"
 server_adr = "http://188.251.214.6:7270"
@@ -81,70 +77,27 @@ def customsettings(): #custom setting ik its a bit spaghetti sorry to who ever t
     return num_workers,batchsize
 
 
+def download_chunks(data_dir): #download chunks func as you can guess it download missing chunks for the dataset
+    os.makedirs(data_dir, exist_ok=True)
+    with open('downloaded_chunks', 'r') as chunkline:
+        chunknumber = int(chunkline.readline().strip())
 
-
-
-
-
-
-
-def download_chunks(data_dir, server_adr): #download chunks func as you can guess it download missing chunks for the dataset
-    try:
-
-        os.makedirs(data_dir, exist_ok=True)
-        with open('downloaded_chunks', 'r') as chunkline:
-            chunknumber = int(chunkline.readline().strip())
-
-        if chunknumber >= 64:
-            print("All chunks downloaded, skipping step...")
-            return
-
-        while chunknumber < 64:
-            try:
-
-                download_url = f"{server_adr}/download_chunk?chunk_number={chunknumber}"
-                print(f"Downloading chunk_{chunknumber} ")
-
-                response = requests.get(download_url, timeout=60)
-                response.raise_for_status()
-
-                zip_file_path = os.path.join(data_dir, f"chunk_{chunknumber}.zip")
-                with open(zip_file_path, 'wb') as f:
-                    f.write(response.content)
-                print(f"Downloaded chunk {chunknumber}")
-
-                try:
-                    with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-                        zip_ref.extractall(data_dir)
-                    print(f"Decompressed chunk {chunknumber}")
-
-                    os.remove(zip_file_path)
-                    chunknumber += 1
-
-                    with open('downloaded_chunks', 'w') as chunkline:
-                        chunkline.write(str(chunknumber))
-
-                except zipfile.BadZipFile:
-                    print(f"Corrupted zip file for chunk {chunknumber}. Removing and retrying.")
-                    if os.path.exists(zip_file_path):
-                        os.remove(zip_file_path)
-                    continue
-
-            except requests.exceptions.RequestException as e:
-                print(f"Failed to download chunk {chunknumber}: {e}")
-
-                time.sleep(2)
-                continue
-
-    except FileNotFoundError:
-        print("No download tracking file found. Creating new one...")
-        with open("downloaded_chunks", 'w') as file:
-            file.write('0')
-        download_chunks(data_dir, server_adr)
-
-
-
-
+    if chunknumber >= 64:
+        print("All chunks downloaded, skipping step...")
+        return
+    if chunknumber < 64:
+        fileid = "1r0I6ZjqKLsGMxNTx3r_KnoPZgySWXsES"
+        download_url = f"https://drive.google.com/uc?id={fileid}"
+        print("Downloading Dataset...")
+        gdown.download(download_url, output='filename.ext', quiet=False)
+        print("Dataset downloaded extracting files...")
+        file_path = 'zippedchunks.7z'
+        output_dir = 'SmallerParsedReplays'
+        with py7zr.SevenZipFile(file_path, mode='r') as archive:
+            archive.extractall(path=output_dir)
+        print("Files Extracted sucessfully")
+        with open('downloaded_chunks', 'w') as file:
+            file.write("64")
 
 class OsuReplayDataset(Dataset):
     def __init__(self, csv_file, data_dir, segment_size=1000, overlap_size=500, is_test=False,
@@ -296,14 +249,14 @@ def initialize_study():
         return optuna.load_study(study_name=study_name, storage=DATABASE_URL)
 
 
-def determine_batch_size(model, max_vram_usage=0.9, min_batch_size=1): #better function to determine batch size dynamicly 
-    
+def determine_batch_size(model, max_vram_usage=0.9, min_batch_size=1):
     # Available VRAM in bytes
     available_vram = torch.cuda.mem_get_info()[0]
+    # Model size in bytes
     model_memory = sum(p.numel() * p.element_size() for p in model.parameters())
-    available_vram *= max_vram_usage  # Limit VRAM usage to a fraction for safety
-    batch_size = available_vram // model_memory  # Estimate batch size based on available memory
-    return max(min_batch_size, int(batch_size))  
+    available_vram *= max_vram_usage
+    batch_size = available_vram // model_memory
+    return max(min_batch_size, int(batch_size))  # Ensure minimum batch size of 1
 
 
 def initialize_model(hidden_size, dropout=0.2):
@@ -312,45 +265,43 @@ def initialize_model(hidden_size, dropout=0.2):
     model = BiLSTMModel(input_size, hidden_size, output_size, num_layers, dropout=dropout).to(device)
     return model
 
+useroption = 1
+def fixedperformancesettings():
+    global num_workers, batchsize, useroption
+    if useroption == 1:
+        print(f"Normal performance chosen")
+    elif useroption == 2:
+        print(f"Half-power chosen")
+        Halfpower()
+    elif useroption == 3:
+        print(f"Low-power chosen")
+        Lowpowermode()
+    elif useroption == 4:
+        customsettings()
+    else:
+        print(f"Invalid input, please choose a number between 1 and 4")
 
-def performancesettings():
-    global num_workers, batchsize
-    validinput = False
-    while not validinput:
-        print(
-            f"Choose performance settings(1-4):\n (1)Normal Perfomance(full computer utilization) \n (2)Half-power \n (3)Low-power \n (4)Custom settings ")
-        useroption = int(input(f"choose an option (1-4): "))
-        if useroption == 1:
-            print(f"Normal performance chosen")
-            validinput = True
-        elif useroption == 2:
-            print(f"Half-power chosen")
-            validinput = True
-            Halfpower()
-        elif useroption == 3:
-            print(f"Low-power chosen")
-            validinput = True
-            Lowpowermode()
-        elif useroption == 4:
-            validinput = True
-            customsettings()
-        else:
-            print(f"Invalid input, please choose a number between 1 and 4")
 
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    # Set up basic resources
     num_workers = multiprocessing.cpu_count()
 
-    # Dataset loading
+    def performancesettings():
+        global num_workers, batchsize, useroption
+        print(f"Choose performance settings(1-4):\n (1)Normal Perfomance(full computer utilization) \n (2)Half-power \n (3)Low-power \n (4)Custom settings ")
+        useroption = int(input(f"choose an option (1-4): "))
+        return useroption
+
+    performancesettings()
+    download_chunks(data_dir)
     dataset = initialize_dataset()
     if dataset is not None:
         train_dataset, test_dataset = stratified_split(dataset)
-
-
     def objective(trial: optuna.Trial):
-        global batchsize  
+        global batchsize, useroption  # Declare batchsize global for broader accessibility
 
         # Sample hyperparameters
         lr = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
@@ -361,20 +312,23 @@ if __name__ == "__main__":
         scheduler_min_lr = trial.suggest_float('scheduler_min_lr', 1e-7, 1e-5, log=True)
         hidden_size = trial.suggest_int('hidden_size', 64, 128)
 
+        # Initialize model with trial hyperparameters
         model = initialize_model(hidden_size, dropout)
 
+        # Calculate batch size and store it globally
         batchsize = determine_batch_size(model)
         batchsize = round(batchsize/26)
         print(f"Calculated batch size: {batchsize}")
-        performancesettings()
+        fixedperformancesettings()
 
+        # DataLoader setup with dynamically determined batch size
         train_dataloader = DataLoader(
-            train_dataset, batch_size=batchsize, shuffle=True,
+            train_dataset, batch_size=round(batchsize), shuffle=True,
             collate_fn=collate_fn, num_workers=round(num_workers / 2),
             persistent_workers=True, pin_memory=True
         )
         test_dataloader = DataLoader(
-            test_dataset, batch_size=batchsize, shuffle=False,
+            test_dataset, batch_size=round(batchsize), shuffle=False,
             collate_fn=collate_fn, num_workers=round(num_workers / 2),
             persistent_workers=True, pin_memory=True
         )
