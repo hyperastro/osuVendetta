@@ -37,8 +37,8 @@ public class ReplayProcessor : IReplayProcessor
 
         await Task.Run(() =>
         {
-            Scaler mean = _config.ScalerMean;
-            Scaler std = _config.ScalerStd;
+            ScalerValues mean = _config.ScalerMean;
+            ScalerValues std = _config.ScalerStd;
 
             if (runInParallel)
             {
@@ -60,7 +60,7 @@ public class ReplayProcessor : IReplayProcessor
     }
 
     void ProcessFrame(int index, List<ReplayFrame> frames, float[] inputs,
-        ref Scaler scalerMean, ref Scaler scalerStd)
+        ref ScalerValues scalerMean, ref ScalerValues scalerStd)
     {
         ReplayFrame currentFrame = frames[index];
         float deltaX = currentFrame.X;

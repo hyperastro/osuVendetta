@@ -57,11 +57,11 @@ public class AntiCheatConfig
     /// <summary>
     /// Value scaler for mean
     /// </summary>
-    public required Scaler ScalerMean { get; set; }
+    public required ScalerValues ScalerMean { get; set; }
     /// <summary>
     /// Value scaler for std
     /// </summary>
-    public required Scaler ScalerStd { get; set; }
+    public required ScalerValues ScalerStd { get; set; }
 
     /// <summary>
     /// Model batch count

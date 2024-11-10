@@ -1,6 +1,7 @@
 @page "/anticheat"
 @using OsuParsers.Decoders
 @using OsuParsers.Replays
+@using System.Diagnostics
 @using osuVendetta.Core.AntiCheat.Data
 @using osuVendetta.CoreLib.AntiCheat.Data
 @using osuVendetta.Web.Client.Components
@@ -219,9 +220,11 @@
 
                 if (result is AntiCheatResult antiCheatResult)
                 {
+                    Debug.WriteLine($"Replay {file.Name}, {antiCheatResult}");
+
                     ReplayResultCardEntry resultCard = new ReplayResultCardEntry
                     {
-                        ProbabilityOfCheating = 100 - antiCheatResult.CheatProbability.Normal,
+                        ProbabilityOfCheating = Math.Round(100 - antiCheatResult.CheatProbability.Normal, 2),
                         PlayerName = replay.PlayerName ?? "Unkown Player",
                         ReplayDate = replay.ReplayTimestamp,
                         ReplayFileName = file.Name,

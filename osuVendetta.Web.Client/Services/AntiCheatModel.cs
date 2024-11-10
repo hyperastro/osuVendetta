@@ -41,8 +41,8 @@ public class AntiCheatModel : IAntiCheatModel
 
         return new Logit
         {
-            Normal = output["0"],
-            Relax = output["1"],
+            Normal = output["1"],
+            Relax = output["0"],
         };
     }
 
