@@ -19,7 +19,7 @@ import py7zr
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 data_dir = 'SmallerParsedReplays/zippedchunksfolder'
 csv_file = 'newcsvfile2small.csv'
-study_name = "64x2FirstRun"
+study_name = "64x3DenseHeads1"
 server_adr = "http://188.251.214.6:7270"
 DATABASE_URL = "postgresql+psycopg2://osuvendetta:osuvendetta@188.251.214.6:5432/optuna_study_db"
 
@@ -89,8 +89,8 @@ def download_chunks(data_dir): #download chunks func as you can guess it downloa
         fileid = "1r0I6ZjqKLsGMxNTx3r_KnoPZgySWXsES"
         download_url = f"https://drive.google.com/uc?id={fileid}"
         print("Downloading Dataset...")
-        gdown.download(download_url, output='filename.ext', quiet=False)
-        print("Dataset downloaded extracting files...")
+        gdown.download(download_url, output='zippedchunks.7z', quiet=False)
+        print("Dataset downloaded extracting files... (Might take a while do not close the program)")
         file_path = 'zippedchunks.7z'
         output_dir = 'SmallerParsedReplays'
         with py7zr.SevenZipFile(file_path, mode='r') as archive:
@@ -167,7 +167,6 @@ def stratified_split(dataset, test_size=0.2):
     flattened_labels = [tuple(label) for label in dataset.labels]
     df = pd.DataFrame({'files': dataset.files, 'labels': flattened_labels})
     train_df, test_df = train_test_split(df, test_size=test_size, stratify=flattened_labels)
-
     train_dataset = Subset(dataset, train_df.index)
     test_dataset = Subset(dataset, test_df.index)
     return train_dataset, test_dataset
@@ -194,29 +193,49 @@ def initialize_dataset():
 
 
 class BiLSTMModel(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, num_layers=2, dropout=0.50):
+    def __init__(self, input_size, hidden_size, num_layers=2, dropout=0.50):
         super(BiLSTMModel, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True, dropout=dropout)
-        self.fc = nn.Linear(hidden_size * 2, output_size)
+
+        # LSTM layer
+        self.lstm = nn.LSTM(
+            input_size, hidden_size, num_layers, batch_first=True,
+            bidirectional=True, dropout=dropout
+        )
+
+        # Separate dense heads for each class
+        self.class_1_head = nn.Linear(hidden_size * 2, 1)  # Output for class_normal
+        self.class_2_head = nn.Linear(hidden_size * 2, 1)  # Output for class_relax
+        self.class_3_head = nn.Linear(hidden_size * 2, 1)  # Output for class_frametime
+
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
+        # Initialize hidden states
         h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)
         c0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)
 
-        out, _ = self.lstm(x, (h0, c0))  # LSTM layer
-        out = self.dropout(out[:, -1, :])
-        out = self.fc(out)  # Fully connected layer
-        return torch.sigmoid(out)
+        # LSTM forward pass
+        out, _ = self.lstm(x, (h0, c0))
+        out = self.dropout(out[:, -1, :])  # Take the last timestep output
+
+        # Compute predictions for each class using separate heads
+        class_1_output = torch.sigmoid(self.class_1_head(out))
+        class_2_output = torch.sigmoid(self.class_2_head(out))
+        class_3_output = torch.sigmoid(self.class_3_head(out))
+
+        # Concatenate the outputs
+        output = torch.cat((class_1_output, class_2_output, class_3_output), dim=1)
+        return output
 
 
 input_size = 6
 hidden_size = 64
 output_size = 3
-num_layers = 2
-model = BiLSTMModel(input_size, hidden_size, output_size, num_layers).to(device)
+num_layers = 3
+dropout = 0.5
+model = BiLSTMModel(input_size, hidden_size, num_layers=num_layers, dropout=dropout).to(device)
 
 class_counts = [10474, 10158, 10456]
 total_samples = sum(class_counts)
@@ -232,6 +251,7 @@ best_f1 = 0.0
 best_model_state = None
 best_epoch = 0
 f1_scores = []
+useroption = 1
 
 def initialize_study():
     global study_initialized
@@ -260,12 +280,11 @@ def determine_batch_size(model, max_vram_usage=0.9, min_batch_size=1):
 
 
 def initialize_model(hidden_size, dropout=0.2):
-    """Initializes the model based on parameters for memory estimation."""
+    
     input_size, output_size, num_layers = 6, 3, 2
-    model = BiLSTMModel(input_size, hidden_size, output_size, num_layers, dropout=dropout).to(device)
+    model = BiLSTMModel(input_size, hidden_size, num_layers=num_layers, dropout=dropout).to(device)
     return model
 
-useroption = 1
 def fixedperformancesettings():
     global num_workers, batchsize, useroption
     if useroption == 1:
@@ -310,14 +329,14 @@ if __name__ == "__main__":
         scheduler_factor = trial.suggest_float('scheduler_factor', 0.1, 0.9)
         scheduler_patience = trial.suggest_int('scheduler_patience', 3, 10)
         scheduler_min_lr = trial.suggest_float('scheduler_min_lr', 1e-7, 1e-5, log=True)
-        hidden_size = trial.suggest_int('hidden_size', 64, 128)
+        hidden_size = trial.suggest_int('hidden_size', 64, 96)
 
         # Initialize model with trial hyperparameters
         model = initialize_model(hidden_size, dropout)
 
         # Calculate batch size and store it globally
         batchsize = determine_batch_size(model)
-        batchsize = round(batchsize/26)
+        batchsize = round(batchsize/28)
         print(f"Calculated batch size: {batchsize}")
         fixedperformancesettings()
 
