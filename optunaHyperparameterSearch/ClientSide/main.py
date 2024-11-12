@@ -28,56 +28,59 @@ dataset_initialized = False
 study_initialized = False
 init_done_file = os.path.join(data_dir, '.init_done')
 
+
 def DetermineBatchSize():
     freemem = torch.cuda.mem_get_info()[0] / 1024 ** 3
-    if freemem < 8: #less than 8Gb of Vram
+    if freemem < 8:  # less than 8Gb of Vram
         return 128
-    elif freemem < 12:#less than 12Gb of Vram
+    elif freemem < 12:  # less than 12Gb of Vram
         return 256
-    elif freemem < 17: #less than 17Gb of Vram
+    elif freemem < 17:  # less than 17Gb of Vram
         return 512
     else:
-        return 1024 #anything else (this won't be used unless u have a rtx 4090 or something)
+        return 1024  # anything else (this won't be used unless u have a rtx 4090 or something)
 
 
-
-def Normal(): #full power mode
+def Normal():  # full power mode
     global num_workers
     global batchsize
     num_workers = num_workers
     batchsize = batchsize
-    return num_workers,batchsize
+    return num_workers, batchsize
 
-def Halfpower(): #half power ....
+
+def Halfpower():  # half power ....
     global num_workers
     global batchsize
-    num_workers = round(num_workers/2)
-    batchsize = batchsize/2
-    return num_workers,batchsize
+    num_workers = round(num_workers / 2)
+    batchsize = round(batchsize / 2)
+    return num_workers, batchsize
 
-def Lowpowermode(): #low power might remove it later its kinda unproductive because of the low batch size
+
+def Lowpowermode():  # low power might remove it later its kinda unproductive because of the low batch size
     global num_workers
     global batchsize
-    num_workers = round(num_workers/4)
-    batchsize = round(batchsize/4)
-    return num_workers,batchsize
+    num_workers = round(num_workers / 4)
+    batchsize = round(batchsize / 4)
+    return num_workers, batchsize
 
 
-def customsettings(): #custom setting ik its a bit spaghetti sorry to who ever tries to read it
+def customsettings():  # custom setting ik its a bit spaghetti sorry to who ever tries to read it
     global num_workers
     global batchsize
     print(f"recommended a batchsize of {batchsize}, and a thread count of {num_workers}")
     batchsize = int(input("Insert custom batchsize: "))
     num_workers = int(input("Insert custom thread count: "))
     if batchsize > DetermineBatchSize():
-        print(f"Warning custom batch size of {batchsize} is bigger than recommended batch size of {DetermineBatchSize()}")
+        print(
+            f"Warning custom batch size of {batchsize} is bigger than recommended batch size of {DetermineBatchSize()}")
     currentcpucount = multiprocessing.cpu_count()
     if num_workers > currentcpucount:
         print(f"Warining custom thread count {num_workers} exceeds cpu core count {currentcpucount}")
-    return num_workers,batchsize
+    return num_workers, batchsize
 
 
-def download_chunks(data_dir): #download chunks func as you can guess it download missing chunks for the dataset
+def download_chunks(data_dir):  # download chunks func as you can guess it download missing chunks for the dataset
     os.makedirs(data_dir, exist_ok=True)
     with open('downloaded_chunks', 'r') as chunkline:
         chunknumber = int(chunkline.readline().strip())
@@ -98,6 +101,7 @@ def download_chunks(data_dir): #download chunks func as you can guess it downloa
         print("Files Extracted sucessfully")
         with open('downloaded_chunks', 'w') as file:
             file.write("64")
+
 
 class OsuReplayDataset(Dataset):
     def __init__(self, csv_file, data_dir, segment_size=1000, overlap_size=500, is_test=False,
@@ -253,6 +257,7 @@ best_epoch = 0
 f1_scores = []
 useroption = 1
 
+
 def initialize_study():
     global study_initialized
     if not study_initialized:
@@ -280,10 +285,10 @@ def determine_batch_size(model, max_vram_usage=0.9, min_batch_size=1):
 
 
 def initialize_model(hidden_size, dropout=0.2):
-    
     input_size, output_size, num_layers = 6, 3, 2
     model = BiLSTMModel(input_size, hidden_size, num_layers=num_layers, dropout=dropout).to(device)
     return model
+
 
 def fixedperformancesettings():
     global num_workers, batchsize, useroption
@@ -300,25 +305,25 @@ def fixedperformancesettings():
     else:
         print(f"Invalid input, please choose a number between 1 and 4")
 
-
+def performancesettings():
+    global num_workers, batchsize, useroption
+    print(
+        f"Choose performance settings(1-4):\n (1)Normal Perfomance(full computer utilization) \n (2)Half-power \n (3)Low-power \n (4)Custom settings ")
+    useroption = int(input(f"choose an option (1-4): "))
+    return useroption
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Set up basic resources
     num_workers = multiprocessing.cpu_count()
-
-    def performancesettings():
-        global num_workers, batchsize, useroption
-        print(f"Choose performance settings(1-4):\n (1)Normal Perfomance(full computer utilization) \n (2)Half-power \n (3)Low-power \n (4)Custom settings ")
-        useroption = int(input(f"choose an option (1-4): "))
-        return useroption
-
     performancesettings()
     download_chunks(data_dir)
     dataset = initialize_dataset()
     if dataset is not None:
         train_dataset, test_dataset = stratified_split(dataset)
+
+
     def objective(trial: optuna.Trial):
         global batchsize, useroption  # Declare batchsize global for broader accessibility
 
@@ -336,7 +341,7 @@ if __name__ == "__main__":
 
         # Calculate batch size and store it globally
         batchsize = determine_batch_size(model)
-        batchsize = round(batchsize/28)
+        batchsize = round(batchsize / 28)
         print(f"Calculated batch size: {batchsize}")
         fixedperformancesettings()
 
@@ -413,7 +418,6 @@ if __name__ == "__main__":
     # Main study setup
     study = initialize_study()
     study.optimize(objective, n_trials=1000, n_jobs=1)
-
 
     # Output best results
     print("Best trial:")
