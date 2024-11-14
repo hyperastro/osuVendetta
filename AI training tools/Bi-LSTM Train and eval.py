@@ -76,7 +76,7 @@ class OsuReplayDataset(Dataset):
         data_samples = []
         for file in tqdm(sample_files, desc="Initializing scaler"):
             try:
-                df = pd.read_csv(file, header=None, usecols=[0, 3, 4], dtype=float, chunksize=10000)
+                df = pd.read_csv(file, header=None, usecols=[0, 1, 2, 3, 4], dtype=float, chunksize=10000)
                 for chunk in df:
                     data_samples.append(chunk)
             except Exception as e:
@@ -93,7 +93,7 @@ class OsuReplayDataset(Dataset):
         try:
             df = pd.read_csv(file, header=None, dtype={0: float, 1: float, 2: float, 3: float, 4: float, 5: str})
             df[5] = self.button_encoder.transform(df[5])
-            df[[0, 3, 4]] = self.scaler.transform(df[[0, 3, 4]])
+            df[[0, 1, 2, 3, 4]] = self.scaler.transform(df[[0, 1, 2, 3, 4]])
             segments = []
             for start in range(0, len(df) - self.segment_size + 1, self.segment_size - 500):
                 end = start + self.segment_size
@@ -133,53 +133,52 @@ dataset = OsuReplayDataset(data_dir)
 print(f"Loaded {len(dataset)} samples from {data_dir}")
 
 train_dataset, test_dataset = stratified_split(dataset)
-train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=collate_fn, num_workers=16)
-test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False, collate_fn=collate_fn, num_workers=16)
+train_dataloader = DataLoader(train_dataset, batch_size=128, shuffle=True, collate_fn=collate_fn, num_workers=16)
+test_dataloader = DataLoader(test_dataset, batch_size=128, shuffle=False, collate_fn=collate_fn, num_workers=16)
 
 class BiLSTMModel(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, num_layers=2, dropout=0.5):
+    def __init__(self, input_size, hidden_size, num_layers=2, dropout=0.50):
         super(BiLSTMModel, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True, dropout=dropout)
-        self.fc = nn.Linear(hidden_size * 2, output_size)
-        self.dropout = nn.Dropout(dropout)
-        self._initialize_weights()
 
-    def _initialize_weights(self):
-        for name, param in self.named_parameters():
-            if 'weight' in name:
-                nn.init.xavier_uniform_(param)
-            elif 'bias' in name:
-                nn.init.constant_(param, 0)
+        # LSTM layer
+        self.lstm = nn.LSTM(
+            input_size, hidden_size, num_layers, batch_first=True,
+            bidirectional=True, dropout=dropout
+        )
+        self.fc = nn.Linear(hidden_size * 2, 1)  
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)
         c0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)
         out, _ = self.lstm(x, (h0, c0))
-        out = self.dropout(out[:, -1, :])
-        out = self.fc(out)
-        return out
+        out = self.dropout(out[:, -1, :])  
+        output = self.fc(out)
+        return output
 
+# Initialize model
 input_size = 6
-hidden_size = 192
-output_size = 2
-num_layers = 2
-model = BiLSTMModel(input_size, hidden_size, output_size, num_layers).to(device)
-print(f"Model is on device: {next(model.parameters()).device}")
+hidden_size = 128
+num_layers = 3
+dropout = 0.3
+model = BiLSTMModel(input_size, hidden_size, num_layers=num_layers, dropout=dropout).to(device)
 
-class_counts = [13277, 13277]  #Be carefull and make sure these raitos match the num of files in the dataset
+#Change class weights based on files in your dataset these values are not absoulute!
+class_counts = [15524, 13800]
 total_samples = sum(class_counts)
-class_weights = [total_samples / (len(class_counts) * count) for count in class_counts]
+class_weights = [total_samples / count for count in class_counts]
 class_weights = torch.tensor(class_weights).to(device)
 
-criterion = nn.CrossEntropyLoss(weight=class_weights)
-optimizer = torch.optim.AdamW(model.parameters(), lr=0.002, weight_decay=1e-3)
-scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True, min_lr=1e-6)#best lr scheduler I have tested
 
-num_epochs = 120
+criterion = nn.BCEWithLogitsLoss(pos_weight=class_weights[1] / class_weights[0])
+optimizer = torch.optim.AdamW(model.parameters(), lr=0.002, weight_decay=1e-3)
+scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True, min_lr=1e-6)
+
+
+num_epochs = 350
 max_grad_norm = 1.0
-accumulation_steps = 2
 train_losses = []
 test_losses = []
 best_f1 = 0.0
@@ -192,19 +191,24 @@ for epoch in range(num_epochs):
     with tqdm(enumerate(train_dataloader), total=len(train_dataloader), desc=f"Epoch {epoch + 1}/{num_epochs}") as pbar:
         for i, (sequences, labels) in pbar:
             sequences, labels = sequences.to(device), labels.to(device)
-            outputs = model(sequences)
+
+
+            outputs = model(sequences).squeeze(1)
+            labels = labels.float()
             loss = criterion(outputs, labels)
-            loss = loss / accumulation_steps
+
+
+            optimizer.zero_grad()
             loss.backward()
-            if (i + 1) % accumulation_steps == 0:
-                nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
-                optimizer.step()
-                optimizer.zero_grad()
-            running_loss += loss.item() * accumulation_steps
-            pbar.set_postfix({'loss': running_loss / ((i + 1) * accumulation_steps)})
+            nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+            optimizer.step()
+
+            running_loss += loss.item()
+            pbar.set_postfix({'loss': running_loss / (i + 1)})
 
     train_losses.append(running_loss / len(train_dataloader))
     print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {running_loss / len(train_dataloader):.4f}")
+
 
     model.eval()
     test_loss = 0.0
@@ -213,15 +217,18 @@ for epoch in range(num_epochs):
     with torch.no_grad():
         for sequences, labels in test_dataloader:
             sequences, labels = sequences.to(device), labels.to(device)
-            outputs = model(sequences)
-            loss = criterion(outputs, labels)
+            outputs = model(sequences).squeeze(1)
+            loss = criterion(outputs, labels.float())
             test_loss += loss.item()
 
-            _, predicted = torch.max(outputs.data, 1)
+
+            preds = (torch.sigmoid(outputs) > 0.5).long()
             all_labels.extend(labels.cpu().numpy())
-            all_preds.extend(predicted.cpu().numpy())
+            all_preds.extend(preds.cpu().numpy())
+
     test_losses.append(test_loss / len(test_dataloader))
     print(f"Epoch [{epoch + 1}/{num_epochs}], Test Loss: {test_loss / len(test_dataloader):.4f}")
+
 
     precision = precision_score(all_labels, all_preds, average='weighted')
     recall = recall_score(all_labels, all_preds, average='weighted')
@@ -233,17 +240,17 @@ for epoch in range(num_epochs):
 
     cm = confusion_matrix(all_labels, all_preds)
     plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=list(range(output_size)),
-                yticklabels=list(range(output_size)))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Class 0', 'Class 1'], yticklabels=['Class 0', 'Class 1'])
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title('Confusion Matrix')
     plt.savefig(f'confusion_matrix_epoch_{epoch + 1}.png')
     plt.close()
     scheduler.step(test_loss)
+
 if best_model_state:
-    torch.save(best_model_state, 'bestbilstmmodel.pth')
-    print("Best model saved as 'bestbilstmmodel.pth'")
+    torch.save(best_model_state, 'best_bilstm_model.pth')
+    print("Best model saved as 'best_bilstm_model.pth'")
     model.load_state_dict(best_model_state)
     dummy_input = torch.randn(1, 1000, input_size).to(device)
     onnx_path = 'osuanticheatmodelbest.onnx'
