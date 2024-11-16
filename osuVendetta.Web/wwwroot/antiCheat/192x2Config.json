@@ -10,11 +10,15 @@
   "TotalFeatureSizePerChunk": 6000,
   "ScalerMean": {
     "DimensionDeltaTime": 7.03284752,
+    "DimensionPosX": 2.55463221e+02,
+    "DimensionPosY": 1.92135235e+02,
     "DimensionDeltaX": 0.00209958789,
     "DimensionDeltaY": 0.0268233697
   },
   "ScalerStd": {
     "DimensionDeltaTime": 562.68982467,
+    "DimensionPosX": 188.44789912,
+    "DimensionPosY": 173.43673961,
     "DimensionDeltaX": 27.54802019,
     "DimensionDeltaY": 27.51032391
   },

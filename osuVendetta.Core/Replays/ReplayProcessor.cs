@@ -98,8 +98,8 @@ public class ReplayProcessor : IReplayProcessor
         indexOverflow *= _config.FeaturesPerStep;
 
         inputs[indexMain + 0] = Normalize(currentFrame.TimeDiff, scalerMean.DimensionDeltaTime, scalerStd.DimensionDeltaTime);
-        inputs[indexMain + 1] = currentFrame.X;
-        inputs[indexMain + 2] = currentFrame.Y;
+        inputs[indexMain + 1] = Normalize(currentFrame.X, scalerMean.DimensionX, scalerStd.DimensionX);
+        inputs[indexMain + 2] = Normalize(currentFrame.Y, scalerMean.DimensionY, scalerStd.DimensionY);
         inputs[indexMain + 3] = Normalize(deltaX, scalerMean.DimensionDeltaX, scalerStd.DimensionDeltaX);
         inputs[indexMain + 4] = Normalize(deltaY, scalerMean.DimensionDeltaY, scalerStd.DimensionDeltaY);
         inputs[indexMain + 5] = GetKeyValue(currentFrame.StandardKeys);

@@ -79,12 +79,16 @@ public class AntiCheatModel192x2 : IAntiCheatModel
             ScalerMean = new ScalerValues
             {
                 DimensionDeltaTime = 7.03284752e+00,
+                DimensionX = 2.55463221e+02,
+                DimensionY = 1.92135235e+02,
                 DimensionDeltaX = 2.09958789e-03,
                 DimensionDeltaY = 2.68233697e-02,
             },
             ScalerStd = new ScalerValues
             {
                 DimensionDeltaTime = 562.68982467,
+                DimensionX = 188.44789912,
+                DimensionY = 173.43673961,
                 DimensionDeltaX = 27.54802019,
                 DimensionDeltaY = 27.51032391,
             },
