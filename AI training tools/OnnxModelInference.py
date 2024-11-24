@@ -107,6 +107,6 @@ def main(directory_path):
 
 # Usage: specify the directory containing .txt files
 if __name__ == "__main__":
-    directory_path = '/mnt/4b55a907-bb3f-43f9-ad49-8c8f30f6a000/C#replayparser/out'  # Replace with the actual directory path
+    directory_path = ''  # Replace with the actual directory path
     main(directory_path)
 
