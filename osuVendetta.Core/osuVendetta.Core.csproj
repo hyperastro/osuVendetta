@@ -1,0 +1,61 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Configurations>win-cuda-debug;linux-cuda-debug;win-cpu-debug;linux-cpu-debug;linux-cpu-release;linux-cuda-release;win-cpu-release;win-cuda-release</Configurations>
+    <PlatformTarget>x64</PlatformTarget>
+    <BaseOutputPath></BaseOutputPath>
+  </PropertyGroup>
+
+  <!-- Set optimization + standalone for release-->
+  <PropertyGroup Condition="'$(Configuration)' == 'linux-cuda-release' Or '$(Configuration)' == 'linux-cpu-release' Or
+                            '$(Configuration)' == 'win-cuda-release' Or '$(Configuration)' == 'win-cpu-release'">
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  
+  <!-- Package references dependent on plattform and cpu/cuda-->
+  <!-- Windows cpu-->
+  <PropertyGroup Condition="'$(Configuration)' == 'win-cpu-release' Or '$(Configuration)' == 'win-cpu-debug'">
+    <DefineConstants>WIN_CPU</DefineConstants>
+  </PropertyGroup>
+  
+  <ItemGroup Condition="'$(Configuration)' == 'win-cpu-release' Or '$(Configuration)' == 'win-cpu-debug'">
+    <PackageReference Include="TorchSharp-cpu" Version="0.105.0" />
+  </ItemGroup>
+
+  <!-- Windows cuda-->
+  <PropertyGroup Condition="'$(Configuration)' == 'win-cuda-release' Or '$(Configuration)' == 'win-cuda-debug'">
+    <DefineConstants>WIN_CUDA</DefineConstants>
+  </PropertyGroup>
+  
+  <ItemGroup Condition="'$(Configuration)' == 'win-cuda-release' Or '$(Configuration)' == 'win-cuda-debug'">
+    <PackageReference Include="TorchSharp-cuda-windows" Version="0.105.0" />
+  </ItemGroup>
+
+  <!-- Linux cpu-->
+  <PropertyGroup Condition="'$(Configuration)' == 'linux-cpu-release' Or '$(Configuration)' == 'linux-cpu-debug'">
+    <DefineConstants>LINUX_CPU</DefineConstants>
+  </PropertyGroup>
+  
+  <ItemGroup Condition="'$(Configuration)' == 'linux-cpu-release' Or '$(Configuration)' == 'linux-cpu-debug'">
+    <PackageReference Include="TorchSharp-cpu" Version="0.105.0" />
+  </ItemGroup>
+  
+  <!-- Linux cuda-->
+  <PropertyGroup Condition="'$(Configuration)' == 'linux-cuda-release' Or '$(Configuration)' == 'linux-cuda-debug'">
+    <DefineConstants>LINUX_CUDA</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'linux-cuda-release' Or '$(Configuration)' == 'linux-cuda-debug'">
+    <PackageReference Include="TorchSharp-cuda-linux" Version="0.105.0" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="OsuParsers" Version="1.7.1" />
+    <PackageReference Include="TorchSharp" Version="0.105.0" />
+  </ItemGroup>
+
+</Project>
