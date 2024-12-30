@@ -68,6 +68,9 @@ public class AntiCheatBenchmarkRunner : IAntiCheatBenchmarkRunner
 
     public async Task<AntiCheatBenchmarkResult> Run(AntiCheatBenchmarkSettings settings, IProgressReporter progressReporter)
     {
+        using FileStream modelStream = File.OpenRead("Data/128x3.safetensors");
+        _antiCheatModel.Load(modelStream);
+
         List<AntiCheatBenchmarkReplayResult> results = new List<AntiCheatBenchmarkReplayResult>();
         Dictionary<DirectoryInfo, (AntiCheatBenchmarkDirectorySetting, List<FileInfo>)> replays = new Dictionary<DirectoryInfo, (AntiCheatBenchmarkDirectorySetting, List<FileInfo>)>();
 

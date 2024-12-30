@@ -71,6 +71,9 @@ public class InferenceMenuPage : MenuPage
 
     async Task<List<AntiCheatModelResult>> ProcessReplays(List<FileInfo> replays)
     {
+        using FileStream modelStream = File.OpenRead("Data/128x3.safetensors");
+        _antiCheatModel.Load(modelStream);
+
         List<AntiCheatModelResult> results = new List<AntiCheatModelResult>();
 
         await Parallel.ForEachAsync(replays, async (replayFile, ctx) =>

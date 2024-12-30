@@ -2,14 +2,15 @@
 using Google.Protobuf.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using osuVendetta.AntiCheatModel128x3;
 using osuVendetta.CLI.Menu;
 using osuVendetta.Core.Anticheat.Benchmark;
 using osuVendetta.Core.AntiCheat;
+using osuVendetta.Core.IO;
 using osuVendetta.Core.Replays;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System.ComponentModel;
+using System.Diagnostics;
 
 namespace osuVendetta.CLI;
 
@@ -63,7 +64,7 @@ internal static class Program
         if (includeMenuSystem)
             services.AddHostedService<MenuSystem>();
 
-        services.AddSingleton<IAntiCheatModel, AnticheatModel128x3>();
+        services.AddSingleton<IAntiCheatModel, AntiCheatModel128x3.AntiCheatModel128x3>();
         services.AddSingleton<IReplayProcessor, ReplayProcessor>();
         services.AddSingleton<IAntiCheatBenchmarkRunner, AntiCheatBenchmarkRunner>();
     }

@@ -10,7 +10,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Data\128x3.dat" />
+    <None Remove="Data\128x3.safetensors" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Data\128x3.bin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\128x3.dat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\128x3.safetensors">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\modelInput.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
