@@ -10,8 +10,7 @@
   </PropertyGroup>
 
   <!-- Set optimization + standalone for release-->
-  <PropertyGroup Condition="'$(Configuration)' == 'linux-cuda-release' Or '$(Configuration)' == 'linux-cpu-release' Or
-                            '$(Configuration)' == 'win-cuda-release' Or '$(Configuration)' == 'win-cpu-release'">
+  <PropertyGroup Condition="'$(Configuration)' == 'linux-cuda-release' Or '$(Configuration)' == 'linux-cpu-release' Or '$(Configuration)' == 'win-cuda-release' Or '$(Configuration)' == 'win-cpu-release'">
     <Optimize>true</Optimize>
   </PropertyGroup>
   
