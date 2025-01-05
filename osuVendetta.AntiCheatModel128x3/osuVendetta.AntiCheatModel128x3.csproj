@@ -26,7 +26,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="Data\128x3.safetensors">
+    <Content Include="Data\128x3V2.safetensors">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

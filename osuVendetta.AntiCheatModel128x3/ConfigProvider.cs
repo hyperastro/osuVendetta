@@ -12,7 +12,7 @@ internal static class ConfigProvider
             {
                 DisplayText = "128x3 Model",
                 Major = 1,
-                Minor = 0
+                Minor = 1
             },
 
             InputSize = 6,
@@ -27,19 +27,19 @@ internal static class ConfigProvider
 
             ScalerMean = new ScalerValues
             {
-                DimensionDeltaTime = 7.03284752f,
-                DimensionX = 2.55463221e+02f,
-                DimensionY = 1.92135235e+02f,
-                DimensionDeltaX = 0.00209958789f,
-                DimensionDeltaY = 0.0268233697f,
+                DimensionDeltaTime = 14.091803334053385f,
+                DimensionX = 255.94747118245044f,
+                DimensionY = 192.43203651627053f,
+                DimensionDeltaX = 0.006618787601832843f,
+                DimensionDeltaY = 0.06667060675316294f,
             },
             ScalerStd = new ScalerValues
             {
-                DimensionDeltaTime = 562.68982467f,
-                DimensionX = 188.44789912f,
-                DimensionY = 173.43673961f,
-                DimensionDeltaX = 27.54802019f,
-                DimensionDeltaY = 27.51032391f,
+                DimensionDeltaTime = 2178.834268435404f,
+                DimensionX = 211.089933155007f,
+                DimensionY = 363.27989919306765f,
+                DimensionDeltaX = 43.42019885061354f,
+                DimensionDeltaY = 156.50799405495763f,
             }
         };
     }

@@ -32,7 +32,7 @@ internal class AntiCheatService : IHostedService
     {
         AnsiConsole.WriteLine("Loading anticheat model...");
 
-        using FileStream modelStream = File.OpenRead("Data/128x3.safetensors");
+        using FileStream modelStream = File.OpenRead("Data/128x3V2.safetensors");
         _antiCheatModel.Load(modelStream);
 
         AnsiConsole.WriteLine("Anticheat model loaded");
