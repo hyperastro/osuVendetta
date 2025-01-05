@@ -47,18 +47,43 @@ public class BenchmarkMenuPage : MenuPage
 
         Table table = new Table()
             .Title("Benchmark Result")
-            .AddColumns(new TableColumn("Total Processed Replays"),
-                        new TableColumn("Accuracy"),
-                        new TableColumn("Time Total (seconds)"),
-                        new TableColumn("Time Average (seconds)"));
+            .AddColumns(new TableColumn("Path"),
+                        new TableColumn("Processed Replays")
+                            .Alignment(Justify.Right),
+                        new TableColumn("Accuracy")
+                            .Alignment(Justify.Right));
+
+        int totalFiles = 0;
 
         if (result is not null)
-            table.AddRow($"{result.ReplayResults.Length}", 
-                         $"{(result.Accuracy * 100):n2} %",
-                         $"{stopwatch.Elapsed.TotalSeconds:n4}",
-                         $"{(stopwatch.Elapsed.TotalSeconds / result.ReplayResults.Length):n4}");
+        {
+            for (int i = 0; i < result.DirectoryResults.Length; i++)
+            {
+                string accuracyStr = (result.DirectoryResults[i].Accuracy * 100).ToString("N2").PadLeft(6, ' ');
+
+                table.AddRow($"{result.DirectoryResults[i].Directory.FullName}",
+                             $"{result.DirectoryResults[i].ReplayResults.Length}",
+                             $"{accuracyStr} %");
+
+                totalFiles += result.DirectoryResults[i].ReplayResults.Length;
+            }
+        }
 
         AnsiConsole.Write(table);
+
+        table = new Table()
+            .AddColumns(new TableColumn("Time total (in seconds)")
+                            .Alignment(Justify.Right),
+                        new TableColumn("Time average (in seconds")
+                            .Alignment(Justify.Right),
+                        new TableColumn("Total Processed Replays")
+                            .Alignment(Justify.Right))
+            .AddRow($"{stopwatch.Elapsed.TotalSeconds:n4}",
+                    $"{(stopwatch.Elapsed.TotalSeconds / totalFiles):n4}",
+                    $"{totalFiles}");
+
+        AnsiConsole.Write(table);
+
         AnsiConsole.WriteLine("Press \"Enter\" to return");
 
         Console.ReadLine();
@@ -80,6 +105,11 @@ public class BenchmarkMenuPage : MenuPage
                 {
                     Directory = new DirectoryInfo("Data/Benchmark/Relax"),
                     ResultProcessor = m => ProcessBenchmark(m, true)
+                },
+                new AntiCheatBenchmarkDirectorySetting
+                {
+                    Directory = new DirectoryInfo("C:/osu!/Replays"),
+                    ResultProcessor = m => ProcessBenchmark(m, false)
                 }
             ]
         };

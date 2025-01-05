@@ -22,7 +22,7 @@ public class AntiCheatBenchmarkRunner : IAntiCheatBenchmarkRunner
 
     public AntiCheatBenchmarkResult Run(AntiCheatBenchmarkSettings settings, IProgressReporter progressReporter)
     {
-        List<AntiCheatBenchmarkReplayResult> results = new List<AntiCheatBenchmarkReplayResult>();
+        //List<AntiCheatBenchmarkReplayResult> results = new List<AntiCheatBenchmarkReplayResult>();
         Dictionary<DirectoryInfo, (AntiCheatBenchmarkDirectorySetting, List<FileInfo>)> replays = new Dictionary<DirectoryInfo, (AntiCheatBenchmarkDirectorySetting, List<FileInfo>)>();
 
         int totalFiles = 0;
@@ -41,18 +41,26 @@ public class AntiCheatBenchmarkRunner : IAntiCheatBenchmarkRunner
         progressReporter.SetMaxProgress(totalFiles);
         progressReporter.SetProgressTitle($"Processing replays (total: {totalFiles})");
 
-        foreach ((AntiCheatBenchmarkDirectorySetting setting, List<FileInfo> files) in replays.Values)
+        //Dictionary<DirectoryInfo, AntiCheatBenchmarkDirectoryResult> results = new Dictionary<DirectoryInfo, AntiCheatBenchmarkDirectoryResult>();
+        List<AntiCheatBenchmarkDirectoryResult> results = new List<AntiCheatBenchmarkDirectoryResult>();
+
+        foreach (DirectoryInfo dir in replays.Keys)
         {
-            Parallel.ForEach(files, (replay, ctx) =>
+            (AntiCheatBenchmarkDirectorySetting setting, List<FileInfo> files) = replays[dir];
+            List<AntiCheatBenchmarkReplayResult> replayResults = new List<AntiCheatBenchmarkReplayResult>();
+
+            Parallel.ForEach(files, replayFile =>
             {
-                AntiCheatBenchmarkReplayResult? result = RunInference(replay, setting);
+                AntiCheatBenchmarkReplayResult? result = RunInference(replayFile, setting);
                 progressReporter.Increment();
 
                 if (result is null)
                     return;
 
-                results.Add(result);
+                replayResults.Add(result);
             });
+
+            results.Add(new AntiCheatBenchmarkDirectoryResult(dir, replayResults.ToArray()));
         }
 
         return new AntiCheatBenchmarkResult(results.ToArray());
