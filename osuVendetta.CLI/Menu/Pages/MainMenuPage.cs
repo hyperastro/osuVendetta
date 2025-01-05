@@ -14,6 +14,7 @@ public class MainMenuPage : MenuPage
     const string _EXIT_CHOICE = "Exit";
 
     readonly IAntiCheatModel _antiCheatModel;
+    string? _errorMessage;
 
     public MainMenuPage(IServiceScope serviceScope) : base(serviceScope)
     {
@@ -23,7 +24,11 @@ public class MainMenuPage : MenuPage
 
     public override async Task<MenuPageResponse> Display()
     {
-        RunDebug();
+        if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            AnsiConsole.WriteLine(_errorMessage);
+            _errorMessage = null;
+        }
 
         string result = AnsiConsole.Prompt(new SelectionPrompt<string>()
             .Title(_TITLE)
@@ -31,6 +36,7 @@ public class MainMenuPage : MenuPage
                         _RUN_BENCHMARK_CHOICE,
                         _SETTINGS_CHOICE,
                         _EXIT_CHOICE));
+
 
         switch (result)
         { 
@@ -41,7 +47,8 @@ public class MainMenuPage : MenuPage
                 return MenuPageResponse.NextPage<BenchmarkMenuPage>();
 
             case _SETTINGS_CHOICE:
-                throw new NotImplementedException();
+                _errorMessage = "Settings are not implemented yet";
+                return MenuPageResponse.Retry();
 
             case _EXIT_CHOICE:
                 return MenuPageResponse.Exit();
@@ -49,38 +56,5 @@ public class MainMenuPage : MenuPage
             default:
                 return MenuPageResponse.Retry();
         }
-    }
-
-    void RunDebug()
-    {
-        //using FileStream modelStream = File.OpenRead("Data/128x3.bin");
-        //_antiCheatModel.Load(modelStream);
-
-        float[,,] tokens = new float[1, _antiCheatModel.Config.StepsPerChunk, _antiCheatModel.Config.FeaturesPerStep];
-
-        int steps = 0;
-        foreach (string line in File.ReadAllLines("Data/modelInput.csv"))
-        {
-            string[] lineSplit = line.Split(',');
-
-            for (int i = 0; i < _antiCheatModel.Config.FeaturesPerStep; i++)
-            {
-                if (!float.TryParse(lineSplit[i], out float token))
-                {
-                    Console.WriteLine($"Unable to parse {lineSplit[i]}");
-                    continue;
-                }
-
-                tokens[0, steps, i] = token;
-            }
-
-            steps++;
-        }
-
-        _antiCheatModel.RunInference(new Core.Replays.Data.ReplayTokens
-        {
-            ReplayName = "Debug Replay",
-            Tokens = tokens
-        });
     }
 }

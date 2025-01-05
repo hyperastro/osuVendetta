@@ -9,7 +9,13 @@ public interface IReplayProcessor
     /// <summary>
     /// Checks if a replay is valid to be processed
     /// </summary>
-    public ReplayValidationResult IsValidReplay(Replay replay);
+    /// <param name="replayData">Stream with replay data (.osr)</param>
+    ReplayValidationResult IsValidReplay(Stream replayData);
 
-    public Task<ReplayTokens> CreateTokensFromFramesAsync(string replayName, List<ReplayFrame> frames, bool runInParallel);
+    /// <summary>
+    /// Creates tokens from a replay
+    /// </summary>
+    /// <param name="replayData">Stream with replay data (.osr)</param>
+    /// <returns></returns>
+    ReplayTokens CreateTokensParallel(Stream replayData);
 }

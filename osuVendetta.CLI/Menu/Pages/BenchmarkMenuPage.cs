@@ -2,6 +2,7 @@
 using osuVendetta.Core.Anticheat.Benchmark;
 using osuVendetta.Core.Anticheat.Benchmark.Data;
 using osuVendetta.Core.Anticheat.Data;
+using osuVendetta.Core.Utility;
 using Spectre.Console;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
@@ -37,7 +38,7 @@ public class BenchmarkMenuPage : MenuPage
             AntiCheatBenchmarkSettings settings = CreateDefaultSettings();
 
             stopwatch.Start();
-            result = await _antiCheatBenchmarkRunner.Run(settings, progressReporter);
+            result = await Task.Run(() => _antiCheatBenchmarkRunner.Run(settings, progressReporter));
             stopwatch.Stop();
         });
 

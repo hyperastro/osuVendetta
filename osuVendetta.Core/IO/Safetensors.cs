@@ -4,8 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using TorchSharp;
 using static TorchSharp.torch;
@@ -45,6 +43,18 @@ public class Safetensors
         return new Safetensors(header, data);
     }
 
+    public static Safetensors FromStateDict(Dictionary<string, Tensor> stateDict)
+    {
+        // TODO: convert state dict to safetensors
+        throw new NotImplementedException();
+    }
+
+    public void Save(Stream stream)
+    {
+        // TODO: save safetensors
+        throw new NotImplementedException();
+    }
+
     public byte[] GetDataFromHeader(SafetensorsJsonHeaderEntry entry)
     {
         int start = entry.DataOffsets[0];
@@ -70,49 +80,15 @@ public class Safetensors
                 tensorData[i] = BitConverter.ToSingle(data, i * 4);
 
             Tensor tensor = torch.tensor(tensorData, dimensions: entry.Shape.Select(v => (long)v).ToArray());
-            result.Add(key, tensor);
+
+            // translate key so it fits the c# style
+            if (!key.StartsWith('_'))
+                result.Add($"_{key}", tensor);
+            else
+                result.Add(key, tensor);
         }
 
         return result;
     }
+
 }
-
-public class SafetensorsJsonHeader : Dictionary<string, SafetensorsJsonHeaderEntry>
-{
-    public static SafetensorsJsonHeader? FromJson(string json)
-    {
-        return JsonSerializer.Deserialize<SafetensorsJsonHeader>(json);
-    }
-}
-
-public class SafetensorsJsonHeaderEntry
-{
-    [JsonPropertyName("dtype")]
-    public required string DType { get; set; }
-    [JsonPropertyName("shape")]
-    public required int[] Shape { get; set; }
-    [JsonPropertyName("data_offsets")]
-    public required int[] DataOffsets { get; set; }
-
-    public override string ToString()
-    {
-        StringBuilder sb = new StringBuilder();
-
-        sb.AppendLine($"DType: {DType}");
-
-        sb.AppendLine("Shape: ");
-        foreach (int shape in Shape)
-            sb.Append($"{shape}, ");
-        sb.Remove(sb.Length - 2, 2);
-        sb.AppendLine();
-
-        sb.AppendLine("DataOffsets: ");
-        foreach(int dataOffset in DataOffsets)
-            sb.Append($"{dataOffset}, ");
-        sb.Remove(sb.Length - 2, 2);
-        sb.AppendLine();
-
-        return sb.ToString();
-    }
-}
-

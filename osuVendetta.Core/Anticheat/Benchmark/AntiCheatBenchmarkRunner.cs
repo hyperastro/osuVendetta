@@ -5,55 +5,9 @@ using osuVendetta.Core.Anticheat.Data;
 using osuVendetta.Core.AntiCheat;
 using osuVendetta.Core.Replays;
 using osuVendetta.Core.Replays.Data;
+using osuVendetta.Core.Utility;
 
 namespace osuVendetta.Core.Anticheat.Benchmark;
-
-public interface IProgressReporter
-{
-    void Increment(double amount = 1.0);
-    void SetMaxProgress(double max);
-    void SetCurrentProgress(double current);
-    void SetProgressTitle(string title);
-}
-
-public class ProgressReporter : IProgressReporter
-{
-    public Action<double> IncrementAction { get; init; }
-    public Action<double> SetCurrentProgressAction { get; init; }
-    public Action<double> SetMaxProgressAction { get; init; }
-    public Action<string> SetProgressTitleAction { get; init; }
-
-    public ProgressReporter(Action<double> incrementAction, 
-                            Action<double> setCurrentProgressAction, 
-                            Action<double> setMaxProgressAction, 
-                            Action<string> setProgressTitleAction)
-    {
-        IncrementAction = incrementAction;
-        SetCurrentProgressAction = setCurrentProgressAction;
-        SetMaxProgressAction = setMaxProgressAction;
-        SetProgressTitleAction = setProgressTitleAction;
-    }
-
-    public void Increment(double amount = 1)
-    {
-        IncrementAction(amount);
-    }
-
-    public void SetCurrentProgress(double current)
-    {
-        SetCurrentProgressAction(current);
-    }
-
-    public void SetMaxProgress(double max)
-    {
-        SetMaxProgressAction(max);
-    }
-
-    public void SetProgressTitle(string title)
-    {
-        SetProgressTitleAction(title);
-    }
-}
 
 public class AntiCheatBenchmarkRunner : IAntiCheatBenchmarkRunner
 {
@@ -66,11 +20,8 @@ public class AntiCheatBenchmarkRunner : IAntiCheatBenchmarkRunner
         _replayProcessor = replayProcessor;
     }
 
-    public async Task<AntiCheatBenchmarkResult> Run(AntiCheatBenchmarkSettings settings, IProgressReporter progressReporter)
+    public AntiCheatBenchmarkResult Run(AntiCheatBenchmarkSettings settings, IProgressReporter progressReporter)
     {
-        using FileStream modelStream = File.OpenRead("Data/128x3.safetensors");
-        _antiCheatModel.Load(modelStream);
-
         List<AntiCheatBenchmarkReplayResult> results = new List<AntiCheatBenchmarkReplayResult>();
         Dictionary<DirectoryInfo, (AntiCheatBenchmarkDirectorySetting, List<FileInfo>)> replays = new Dictionary<DirectoryInfo, (AntiCheatBenchmarkDirectorySetting, List<FileInfo>)>();
 
@@ -92,9 +43,9 @@ public class AntiCheatBenchmarkRunner : IAntiCheatBenchmarkRunner
 
         foreach ((AntiCheatBenchmarkDirectorySetting setting, List<FileInfo> files) in replays.Values)
         {
-            await Parallel.ForEachAsync(files, async (replay, ctx) =>
+            Parallel.ForEach(files, (replay, ctx) =>
             {
-                AntiCheatBenchmarkReplayResult? result = await RunInference(replay, setting);
+                AntiCheatBenchmarkReplayResult? result = RunInference(replay, setting);
                 progressReporter.Increment();
 
                 if (result is null)
@@ -107,17 +58,34 @@ public class AntiCheatBenchmarkRunner : IAntiCheatBenchmarkRunner
         return new AntiCheatBenchmarkResult(results.ToArray());
     }
 
-    async Task<AntiCheatBenchmarkReplayResult?> RunInference(FileInfo file, AntiCheatBenchmarkDirectorySetting setting)
+    AntiCheatBenchmarkReplayResult? RunInference(FileInfo file, AntiCheatBenchmarkDirectorySetting setting)
     {
-        Replay replay = ReplayDecoder.Decode(file.FullName);
-        ReplayValidationResult validation = _replayProcessor.IsValidReplay(replay);
+        // TODO: replaydecoder closes the file after reading once? need to check
+        FileStream replayStream = File.OpenRead(file.FullName);
+        try
+        {
+            ReplayValidationResult validation = _replayProcessor.IsValidReplay(replayStream);
 
-        if (!validation.IsValid)
-            return null;
+            if (!validation.IsValid)
+                return null;
+        }
+        finally
+        {
+            replayStream.Dispose();
+        }
+        
+        try
+        {
+            replayStream = File.OpenRead(file.FullName);
+            ReplayTokens tokens = _replayProcessor.CreateTokensParallel(replayStream);
+            AntiCheatModelResult result = _antiCheatModel.RunInference(tokens);
 
-        ReplayTokens tokens = await _replayProcessor.CreateTokensFromFramesAsync(file.Name, replay.ReplayFrames, true);
-        AntiCheatModelResult result = _antiCheatModel.RunInference(tokens);
+            return setting.ResultProcessor(result);
+        }
+        finally
+        {
+            replayStream.Dispose();
+        }
 
-        return setting.ResultProcessor(result);
     }
 }

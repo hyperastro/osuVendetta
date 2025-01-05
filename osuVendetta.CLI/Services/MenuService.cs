@@ -1,17 +1,21 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using osuVendetta.CLI.Menu;
 using osuVendetta.CLI.Menu.Pages;
 using Spectre.Console;
 
-namespace osuVendetta.CLI.Menu;
+namespace osuVendetta.CLI.Services;
 
-public class MenuSystem : IHostedService
+/// <summary>
+/// Service responsible for handling the menu
+/// </summary>
+public class MenuService : IHostedService
 {
     readonly Stack<MenuPage> _pageStack;
     readonly IServiceProvider _serviceProvider;
     readonly IHostApplicationLifetime _lifetime;
 
-    public MenuSystem(IServiceProvider serviceProvider, IHostApplicationLifetime lifetime)
+    public MenuService(IServiceProvider serviceProvider, IHostApplicationLifetime lifetime)
     {
         _pageStack = new Stack<MenuPage>();
         _serviceProvider = serviceProvider;
@@ -27,6 +31,9 @@ public class MenuSystem : IHostedService
     public async Task<bool> Display()
     {
         MenuPage currentPage = _pageStack.Peek();
+
+        AnsiConsole.Clear();
+
         MenuPageResponse? pageResponse = await currentPage.Display();
 
         switch (pageResponse.ResponseType)
@@ -60,6 +67,9 @@ public class MenuSystem : IHostedService
         return false;
     }
 
+    /// <summary>
+    /// Navigates to the previous page
+    /// </summary>
     public void NavigateBack()
     {
         if (_pageStack.Count == 1)
@@ -69,6 +79,11 @@ public class MenuSystem : IHostedService
         page.Dispose();
     }
 
+    /// <summary>
+    /// <inheritdoc cref="NavigateTo{TMenuPage}()"/>
+    /// </summary>
+    /// <param name="menuPageType">Menu page type</param>
+    /// <exception cref="InvalidOperationException"></exception>
     public void NavigateTo(Type menuPageType)
     {
         IServiceScope serviceScope = _serviceProvider.CreateScope();
@@ -95,12 +110,19 @@ public class MenuSystem : IHostedService
         _pageStack.Push(menuPage);
     }
 
+    /// <summary>
+    /// Navigates to the next page
+    /// </summary>
+    /// <typeparam name="TMenuPage">Menu page type</typeparam>
     public void NavigateTo<TMenuPage>()
         where TMenuPage : MenuPage
     {
         NavigateTo(typeof(TMenuPage));
     }
 
+    /// <summary>
+    /// Returns to the main menu
+    /// </summary>
     public void NavigateToMainMenu()
     {
         while (_pageStack.Count > 1)
@@ -109,6 +131,26 @@ public class MenuSystem : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        _lifetime.ApplicationStarted.Register(async () => await RunMenuAsync());
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Runs the menu loop
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    async Task RunMenuAsync()
+    {
+        // let the system fire up fully before running the system, not sure if there is a better way
+        await Task.Delay(15);
+
+        Console.WriteLine("RunMenu");
+
         try
         {
             AnsiConsole.Foreground = Color.Cyan3;
@@ -117,8 +159,7 @@ public class MenuSystem : IHostedService
             NavigateTo<MainMenuPage>();
 
             bool shouldExit = false;
-            while (!cancellationToken.IsCancellationRequested &&
-                   !shouldExit)
+            while (!shouldExit)
             {
                 shouldExit = await Display();
             }
@@ -127,10 +168,5 @@ public class MenuSystem : IHostedService
         {
             _lifetime.StopApplication();
         }
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
     }
 }

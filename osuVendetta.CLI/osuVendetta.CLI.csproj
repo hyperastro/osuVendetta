@@ -10,26 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Data\128x3.dat" />
-    <None Remove="Data\128x3.safetensors" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Data\128x3.bin">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Data\128x3.dat">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Data\128x3.safetensors">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Data\modelInput.csv">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
     <PackageReference Include="Spectre.Console" Version="0.49.2-preview.0.69" />

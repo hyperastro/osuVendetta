@@ -1,4 +1,5 @@
-﻿using OsuParsers.Enums;
+﻿using OsuParsers.Decoders;
+using OsuParsers.Enums;
 using OsuParsers.Enums.Replays;
 using OsuParsers.Replays;
 using OsuParsers.Replays.Objects;
@@ -18,8 +19,10 @@ public class ReplayProcessor : IReplayProcessor
         _model = anticheatModel;
     }
 
-    public ReplayValidationResult IsValidReplay(Replay replay)
+    public ReplayValidationResult IsValidReplay(Stream replayData)
     {
+        Replay replay = ReplayDecoder.Decode(replayData);
+
         if (replay.ReplayFrames.Count == 0)
             return new ReplayValidationResult(false, $"Replay has no frames");
 
@@ -33,56 +36,25 @@ public class ReplayProcessor : IReplayProcessor
         }
     }
 
-    public async Task<ReplayTokens> CreateTokensFromFramesAsync(string replayName, List<ReplayFrame> frames, bool runInParallel)
+    public ReplayTokens CreateTokensParallel(Stream replayData)
     {
+        Replay replay = ReplayDecoder.Decode(replayData);
+        List<ReplayFrame> frames = replay.ReplayFrames;
+
         // include the first chunk being 1000 frames instead of 500 (-size, +1)
         int totalChunks = (int)Math.Ceiling((frames.Count - _model.Config.StepsPerChunk) / (float)_model.Config.StepOverlay) + 1;
-
-        if (totalChunks <= 0)
-            Debugger.Break();
-
         float[] inputs = new float[totalChunks * _model.Config.TotalFeatureSizePerChunk];
 
-        await Task.Run(() =>
+        ScalerValues mean = _model.Config.ScalerMean;
+        ScalerValues std = _model.Config.ScalerStd;
+        Parallel.For(0, frames.Count, index =>
         {
-            ScalerValues mean = _model.Config.ScalerMean;
-            ScalerValues std = _model.Config.ScalerStd;
-
-            if (runInParallel)
-            {
-                Parallel.For(0, frames.Count, index =>
-                {
-                    ProcessFrame(index, frames, inputs, ref mean, ref std);
-                });
-            }
-            else
-            {
-                for (int i = 0; i < frames.Count; i++)
-                    ProcessFrame(i, frames, inputs, ref mean, ref std);
-            }
-
+            ProcessFrame(index, frames, inputs, ref mean, ref std);
         });
-
-        // TODO: temporary fix, replace method later
-        int batchSize = (int)Math.Ceiling((float)inputs.Length / _model.Config.TotalFeatureSizePerChunk);
-        float[,,] input = new float[batchSize, _model.Config.StepsPerChunk, _model.Config.FeaturesPerStep];
-
-        int inputIdx = 0;
-        for (int idx0 = 0; idx0 < batchSize; idx0++)
-        {
-            for (int idx1 = 0; idx1 < _model.Config.StepsPerChunk; idx1++)
-            {
-                for (int idx2 = 0; idx2 < _model.Config.FeaturesPerStep; idx2++)
-                {
-                    input[idx0, idx1, idx2] = inputs[inputIdx++];
-                }
-            }
-        }
 
         return new ReplayTokens
         {
-            Tokens = input,
-            ReplayName = replayName
+            Tokens = inputs,
         };
     }
 

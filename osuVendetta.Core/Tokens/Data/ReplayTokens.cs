@@ -7,6 +7,5 @@ namespace osuVendetta.Core.Replays.Data;
 /// </summary>
 public class ReplayTokens
 {
-    public required string ReplayName { get; set; }
-    public required float[,,] Tokens { get; set; }
+    public required float[] Tokens { get; set; }
 }

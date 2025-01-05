@@ -2,7 +2,8 @@
 using Google.Protobuf.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using osuVendetta.CLI.Menu;
+using Microsoft.Extensions.Logging;
+using osuVendetta.CLI.Services;
 using osuVendetta.Core.Anticheat.Benchmark;
 using osuVendetta.Core.AntiCheat;
 using osuVendetta.Core.IO;
@@ -14,7 +15,7 @@ using System.Diagnostics;
 
 namespace osuVendetta.CLI;
 
-internal static class Program
+internal class Program
 {
     public static IHost? App { get; private set; }
     public static ICommandApp? CommandApp { get; private set; }
@@ -51,21 +52,41 @@ internal static class Program
 
     static async Task RunAppHost()
     {
+        AnsiConsole.Foreground = ConsoleColor.Cyan;
+        AnsiConsole.WriteLine("Starting...");
+
         HostApplicationBuilder builder = Host.CreateApplicationBuilder();
         ConfigureServices(builder.Services, true);
 
+        builder.Logging.ClearProviders();
+        builder.Logging.SetMinimumLevel(LogLevel.Information);
+        builder.Logging.AddConsole(options =>
+        {
+            options.LogToStandardErrorThreshold = LogLevel.Error;
+        });
+        
         App = builder.Build();
+
+        AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
+        {
+            Exception exception = (Exception)eventArgs.ExceptionObject;
+
+            ILogger logger = App.Services.GetRequiredService<ILogger<Program>>();
+            logger.LogCritical($"An unhandled exception occured:\n{exception.Message}");
+        };
 
         await App.RunAsync();
     }
 
     static void ConfigureServices(IServiceCollection services, bool includeMenuSystem)
     {
-        if (includeMenuSystem)
-            services.AddHostedService<MenuSystem>();
-
         services.AddSingleton<IAntiCheatModel, AntiCheatModel128x3.AntiCheatModel128x3>();
         services.AddSingleton<IReplayProcessor, ReplayProcessor>();
         services.AddSingleton<IAntiCheatBenchmarkRunner, AntiCheatBenchmarkRunner>();
+
+        services.AddHostedService<AntiCheatService>();
+
+        if (includeMenuSystem)
+            services.AddHostedService<MenuService>();
     }
 }

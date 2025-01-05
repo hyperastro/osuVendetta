@@ -1,4 +1,4 @@
-﻿namespace osuVendetta.CLI.Menu.Pages;
+﻿namespace osuVendetta.CLI.Menu;
 
 public enum MenuPageResponseType
 {

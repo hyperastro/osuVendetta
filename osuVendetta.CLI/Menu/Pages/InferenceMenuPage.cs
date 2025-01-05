@@ -16,6 +16,12 @@ namespace osuVendetta.CLI.Menu.Pages;
 
 public class InferenceMenuPage : MenuPage
 {
+    class InferenceReplayResult
+    {
+        public required string ReplayName { get; set; }
+        public required AntiCheatModelResult InferenceResult { get; set; }
+    }
+
     readonly IAntiCheatModel _antiCheatModel;
     readonly IReplayProcessor _replayProcessor;
 
@@ -31,7 +37,7 @@ public class InferenceMenuPage : MenuPage
     public override async Task<MenuPageResponse> Display()
     {
         List<FileInfo> replaysToProcess = PromptForReplays();
-        List<AntiCheatModelResult> processedReplays = await ProcessReplays(replaysToProcess);
+        List<InferenceReplayResult> processedReplays = ProcessReplays(replaysToProcess);
 
         AnsiConsole.WriteLine("Preparing result...");
 
@@ -41,22 +47,22 @@ public class InferenceMenuPage : MenuPage
 
         for (int i = 0; i < processedReplays.Count; i++)
         {
-            AntiCheatModelResult result = processedReplays[i];
+            InferenceReplayResult result = processedReplays[i];
 
             table.AddRow(result.ReplayName.Replace("[", "[[")
                                           .Replace("]", "]]"));
 
             float total = 0;
-            for (int j = 0; j < result.Segments.Length; j++)
+            for (int j = 0; j < result.InferenceResult.Segments.Length; j++)
             {
-                total += result.Segments[j];
+                total += result.InferenceResult.Segments[j];
 
                 table.AddRow(string.Empty,
-                             $"{(result.Segments[j] * 100):N2} %");
+                             $"{(result.InferenceResult.Segments[j] * 100):N2} %");
             }
 
             table.AddRow(string.Empty,
-                         $"Average: {(total / result.Segments.Length * 100):N2} %");
+                         $"Average: {(total / result.InferenceResult.Segments.Length * 100):N2} %");
         }
 
         AnsiConsole.Clear();
@@ -69,25 +75,42 @@ public class InferenceMenuPage : MenuPage
         return MenuPageResponse.PreviousPage();
     }
 
-    async Task<List<AntiCheatModelResult>> ProcessReplays(List<FileInfo> replays)
+    List<InferenceReplayResult> ProcessReplays(List<FileInfo> replays)
     {
-        using FileStream modelStream = File.OpenRead("Data/128x3.safetensors");
-        _antiCheatModel.Load(modelStream);
+        List<InferenceReplayResult> results = new List<InferenceReplayResult>();
 
-        List<AntiCheatModelResult> results = new List<AntiCheatModelResult>();
-
-        await Parallel.ForEachAsync(replays, async (replayFile, ctx) =>
+        Parallel.ForEach(replays, (replayFile, ctx) =>
         {
-            Replay replay = ReplayDecoder.Decode(replayFile.FullName);
-            ReplayValidationResult validation = _replayProcessor.IsValidReplay(replay);
+            // TODO: replaydecoder closes the file after reading once? need to check
+            FileStream replayStream = File.OpenRead(replayFile.FullName);
+            try
+            {
+                ReplayValidationResult validation = _replayProcessor.IsValidReplay(replayStream);
 
-            if (!validation.IsValid)
-                return;
+                if (!validation.IsValid)
+                    return;
+            }
+            finally
+            {
+                replayStream.Dispose();
+            }
 
-            ReplayTokens tokens = await _replayProcessor.CreateTokensFromFramesAsync(replayFile.Name, replay.ReplayFrames, true);
-            AntiCheatModelResult result = _antiCheatModel.RunInference(tokens);
+            try
+            {
+                replayStream = File.OpenRead(replayFile.FullName);
+                ReplayTokens tokens = _replayProcessor.CreateTokensParallel(replayStream);
+                AntiCheatModelResult result = _antiCheatModel.RunInference(tokens);
 
-            results.Add(result);
+                results.Add(new InferenceReplayResult
+                {
+                    InferenceResult = result,
+                    ReplayName = replayFile.Name
+                });
+            }
+            finally
+            {
+                replayStream.Dispose();
+            }
         });
 
         return results;

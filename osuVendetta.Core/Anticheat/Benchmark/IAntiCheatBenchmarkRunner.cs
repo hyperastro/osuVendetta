@@ -1,5 +1,6 @@
 ﻿using osuVendetta.Core.Anticheat.Benchmark.Data;
 using osuVendetta.Core.AntiCheat;
+using osuVendetta.Core.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,5 +16,5 @@ public interface IAntiCheatBenchmarkRunner
     /// </summary>
     /// <param name="settings">Benchmark settings</param>
     /// <returns>Benchmark result</returns>
-    Task<AntiCheatBenchmarkResult> Run(AntiCheatBenchmarkSettings settings, IProgressReporter progressReporter);
+    AntiCheatBenchmarkResult Run(AntiCheatBenchmarkSettings settings, IProgressReporter progressReporter);
 }

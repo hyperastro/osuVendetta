@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace osuVendetta.CLI.Menu.Pages;
+namespace osuVendetta.CLI.Menu;
 
 public abstract class MenuPage : IDisposable
 {
