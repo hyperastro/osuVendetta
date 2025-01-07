@@ -122,8 +122,6 @@ public class AntiCheatModel128x3 : Module<Tensor, Tensor>, IAntiCheatModel
             Console.WriteLine($"Unexpected key: {unexpectedKey}");
 
         _to(Device, 0, false);
-
-        Console.ReadLine();
     }
 
     public void SetDevice(DeviceType device)
