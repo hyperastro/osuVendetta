@@ -121,6 +121,13 @@ public class AntiCheatModel128x3 : Module<Tensor, Tensor>, IAntiCheatModel
         foreach (string unexpectedKey in unexpectedKeys)
             Console.WriteLine($"Unexpected key: {unexpectedKey}");
 
+        if (missingKeys.Count > 0 || unexpectedKeys.Count > 0)
+        {
+            Console.WriteLine("Unable to continue. Fix the model then retry.");
+            Console.ReadLine();
+            Environment.Exit(0);
+        }
+
         _to(Device, 0, false);
     }
 
@@ -135,12 +142,12 @@ public class AntiCheatModel128x3 : Module<Tensor, Tensor>, IAntiCheatModel
         if (input.device_type != Device)
             input = input.to(Device);
 
-        using LstmResult lstmTensor = _lstm.forward(input);
-        using Tensor lstmMean = lstmTensor.IntPtr.mean([1]);
-        using Tensor lstmSqueezed = lstmMean.squeeze(1);
-        using Tensor dropOutTensor = _dropOut.forward(lstmSqueezed);
-        using Tensor logits = _fc.forward(dropOutTensor);
+        using LstmResult lstm = _lstm.forward(input);
+        using Tensor mean = lstm.IntPtr.mean([1]);
+        using Tensor squeezed = mean.squeeze(1);
+        using Tensor dropOut = _dropOut.forward(squeezed);
+        using Tensor fc = _fc.forward(dropOut);
 
-        return sigmoid(logits);
+        return sigmoid(fc);
     }
 }
