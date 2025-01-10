@@ -20,10 +20,17 @@ public static class TorchSharpUtilities
 
     public static string ToFlattenedContentString(this Tensor tensor)
     {
-        using Tensor flattened = tensor.flatten();
-        using TensorAccessor<float> accessor = flattened.data<float>();
-        float[] data = accessor.ToArray();
+        float[] data = tensor.ToArray<float>();
 
         return string.Join(", ", data);
+    }
+
+    public static T[] ToArray<T>(this Tensor tensor)
+        where T : unmanaged
+    {
+        using Tensor flattened = tensor.flatten();
+        using TensorAccessor<T> accessor = flattened.data<T>();
+
+        return accessor.ToArray();
     }
 }
