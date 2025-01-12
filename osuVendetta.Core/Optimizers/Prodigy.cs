@@ -100,7 +100,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
         //bool fsdpInUse = group.Options.FsdpInUse;
 
         Tensor dNumerator = group.Options.DNumerator * beta3;
-        float deltaNumerator = 0;
+        Tensor deltaNumerator = 0;
 
         return _step<ParamGroup>(group =>
         {
@@ -168,7 +168,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                     // we use d / d0 instead of just d to avoid getting values that are too small
 
                     Tensor slicedGrad = grad.flatten().index(TensorIndex.Slice(null, null, sliceP));
-                    //delta_numerator += (d / d0) * dlr * torch.dot(sliced_grad, p0.data - p.data.flatten()[::slice_p]).item()
+                    deltaNumerator += (d / d0) * dlr * dot(slicedGrad, p0 - p0.flatten().index(TensorIndex.Slice(0, 0, sliceP)));
 
                     //# Adam EMA updates
                     if (beta1.item<float>() > 0)
