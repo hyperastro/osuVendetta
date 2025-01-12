@@ -11,8 +11,8 @@ internal static class ConfigProvider
             Version = new AntiCheatModelVersion
             {
                 DisplayText = "128x3 Model",
-                Major = 1,
-                Minor = 1
+                Major = 2,
+                Minor = 0
             },
 
             InputSize = 6,
@@ -21,7 +21,7 @@ internal static class ConfigProvider
             LayerCount = 3,
             Dropout = 0.3,
 
-            StepOverlay = 500,
+            StepOverlay = 0,
             StepsPerChunk = 1000,
             FeaturesPerStep = 6,
 

@@ -42,7 +42,8 @@ public class ReplayProcessor : IReplayProcessor
         List<ReplayFrame> frames = replay.ReplayFrames;
 
         // include the first chunk being 1000 frames instead of 500 (-size, +1)
-        int totalChunks = (int)Math.Ceiling((frames.Count - _model.Config.StepsPerChunk) / (float)_model.Config.StepOverlay) + 1;
+        int totalChunks = frames.Count / _model.Config.StepsPerChunk;
+        //int totalChunks = (int)Math.Ceiling((frames.Count - _model.Config.StepsPerChunk) / (float)_model.Config.StepOverlay) + 1;
         float[] inputs = new float[totalChunks * _model.Config.TotalFeatureSizePerChunk];
 
         ScalerValues mean = _model.Config.ScalerMean;
@@ -72,29 +73,30 @@ public class ReplayProcessor : IReplayProcessor
             deltaY -= lastFrame.Y;
         }
 
-        int indexMain;
-        int indexOverflow = -1;
+        int indexMain = index;
+        //int indexMain;
+        //int indexOverflow = -1;
 
-        if (index < _model.Config.StepOverlay)
-        {
-            indexMain = index;
-        }
-        else if (index < _model.Config.StepsPerChunk)
-        {
-            indexMain = index;
-            indexOverflow = index + _model.Config.StepOverlay;
-        }
-        else
-        {
-            int chunkIndex = (index - _model.Config.StepsPerChunk) / _model.Config.StepOverlay + 1;
-            int chunkOffset = index % _model.Config.StepOverlay;
+        //if (index < _model.Config.StepOverlay)
+        //{
+        //    indexMain = index;
+        //}
+        //else if (index < _model.Config.StepsPerChunk)
+        //{
+        //    indexMain = index;
+        //    indexOverflow = index + _model.Config.StepOverlay;
+        //}
+        //else
+        //{
+        //    int chunkIndex = (index - _model.Config.StepsPerChunk) / _model.Config.StepOverlay + 1;
+        //    int chunkOffset = index % _model.Config.StepOverlay;
 
-            indexMain = chunkIndex * _model.Config.StepsPerChunk + chunkOffset + _model.Config.StepOverlay;
-            indexOverflow = indexMain + _model.Config.StepOverlay;
-        }
+        //    indexMain = chunkIndex * _model.Config.StepsPerChunk + chunkOffset + _model.Config.StepOverlay;
+        //    indexOverflow = indexMain + _model.Config.StepOverlay;
+        //}
 
         indexMain *= _model.Config.FeaturesPerStep;
-        indexOverflow *= _model.Config.FeaturesPerStep;
+        //indexOverflow *= _model.Config.FeaturesPerStep;
 
         inputs[indexMain + 0] = Normalize(currentFrame.TimeDiff, scalerMean.DimensionDeltaTime, scalerStd.DimensionDeltaTime);
         inputs[indexMain + 1] = Normalize(currentFrame.X, scalerMean.DimensionX, scalerStd.DimensionX);
@@ -103,15 +105,15 @@ public class ReplayProcessor : IReplayProcessor
         inputs[indexMain + 4] = Normalize(deltaY, scalerMean.DimensionDeltaY, scalerStd.DimensionDeltaY);
         inputs[indexMain + 5] = GetKeyValue(currentFrame.StandardKeys);
 
-        if (indexOverflow > -1 && indexOverflow < inputs.Length)
-        {
-            inputs[indexOverflow + 0] = inputs[indexMain + 0];
-            inputs[indexOverflow + 1] = inputs[indexMain + 1];
-            inputs[indexOverflow + 2] = inputs[indexMain + 2];
-            inputs[indexOverflow + 3] = inputs[indexMain + 3];
-            inputs[indexOverflow + 4] = inputs[indexMain + 4];
-            inputs[indexOverflow + 5] = inputs[indexMain + 5];
-        }
+        //if (indexOverflow > -1 && indexOverflow < inputs.Length)
+        //{
+        //    inputs[indexOverflow + 0] = inputs[indexMain + 0];
+        //    inputs[indexOverflow + 1] = inputs[indexMain + 1];
+        //    inputs[indexOverflow + 2] = inputs[indexMain + 2];
+        //    inputs[indexOverflow + 3] = inputs[indexMain + 3];
+        //    inputs[indexOverflow + 4] = inputs[indexMain + 4];
+        //    inputs[indexOverflow + 5] = inputs[indexMain + 5];
+        //}
     }
 
     static float Normalize(double value, double mean, double stdDev)
