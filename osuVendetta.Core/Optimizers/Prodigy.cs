@@ -7,7 +7,7 @@ using Tensorboard;
 using static TorchSharp.torch.distributions.constraints;
 using OptimizerOptions = TorchSharp.Modules.OptimizerOptions;
 
-namespace osuVendetta.AntiCheatModel128x3;
+namespace osuVendetta.Core.Optimizers;
 
 public class Prodigy : OptimizerHelper, optim.IBetas
 {
@@ -27,10 +27,10 @@ public class Prodigy : OptimizerHelper, optim.IBetas
     }
 
     // Skyfly: are the parameters required here? doesn't seem to be used in the base constructor
-    public Prodigy(/*IEnumerable<Parameter> parameters, */float learningRate =  1, float beta1 = .9f, float beta2 = .999f, float? beta3 = null,
+    public Prodigy(/*IEnumerable<Parameter> parameters, */float learningRate = 1, float beta1 = .9f, float beta2 = .999f, float? beta3 = null,
         float eps = 1e-8f, float weightDecay = 0, bool decouple = true, bool useBiasCorrection = false,
-        bool safeguardWarmup = false, float d0 = 1e-6f, float dCoef =  1f, float growthRate = float.PositiveInfinity,
-        long sliceP = 1) 
+        bool safeguardWarmup = false, float d0 = 1e-6f, float dCoef = 1f, float growthRate = float.PositiveInfinity,
+        long sliceP = 1)
     {
         _defaults = new Options
         {
@@ -64,7 +64,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
             throw new InvalidOperationException("Sharded/Distributed parameters currently not implemented");
 
         Tensor? loss = null;
-            
+
         if (closure is not null)
             loss = closure();
 
@@ -181,9 +181,9 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                     expAvgSq.mul_(beta2).addcmul_(grad, grad, (d * d * (1 - beta2)).ToScalar());
 
                     if (safeguardWarmup)
-                        s.mul_(beta3).add_(slicedGrad, ((d / d0) * d).ToScalar());
+                        s.mul_(beta3).add_(slicedGrad, (d / d0 * d).ToScalar());
                     else
-                        s.mul_(beta3).add_(slicedGrad, ((d / d0) * dlr).ToScalar());
+                        s.mul_(beta3).add_(slicedGrad, (d / d0 * dlr).ToScalar());
 
                     dDenom += s.abs().sum().item<float>();
                 }
@@ -282,7 +282,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
         public Tensor? ExpAvgSq { get; set; }
 
         public State(Parameter parameter) : base(parameter)
-        { 
+        {
         }
 
         public void Dispose()
@@ -324,7 +324,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
         public override void LoadStateDict(BinaryReader reader)
         {
             Step = reader.ReadInt64();
-            
+
             S = zeros_like(_parameter).DetachFromDisposeScope();
             S.Load(reader);
 
@@ -400,19 +400,19 @@ public class Prodigy : OptimizerHelper, optim.IBetas
         public Tensor? D { get; set; }
         public Tensor? DMax { get; set; }
         public Tensor? DHat { get; set; }
-        public float WeightDecay {  get; set; }
+        public float WeightDecay { get; set; }
         public float K { get; set; }
         public float EPS { get; set; }
 
         //public ParamGroup(IEnumerable<Parameter> parameters, Options options) : base(parameters, options) 
         //{ 
-        
+
         //}
 
-        public ParamGroup(IEnumerable<Parameter> parameters, float learningRate = 1, float beta1 = .9f, 
-            float beta2 = .999f, float? beta3 = null, float eps = 1e-8f, float weightDecay = 0f, 
-            bool decouple = true, bool useBiasCorrection = false, bool safeguardWarmup = false, float d0 = 1e-6f, 
-            float dCoef = 1f, float growthRate = float.PositiveInfinity, bool fsdpInUse = false, long sliceP = 1) : 
+        public ParamGroup(IEnumerable<Parameter> parameters, float learningRate = 1, float beta1 = .9f,
+            float beta2 = .999f, float? beta3 = null, float eps = 1e-8f, float weightDecay = 0f,
+            bool decouple = true, bool useBiasCorrection = false, bool safeguardWarmup = false, float d0 = 1e-6f,
+            float dCoef = 1f, float growthRate = float.PositiveInfinity, bool fsdpInUse = false, long sliceP = 1) :
             base(parameters, new Options
             {
                 LearningRate = 1,
