@@ -11,7 +11,7 @@ namespace osuVendetta.AntiCheatModel128x3;
 
 public class AntiCheatTrainer
 {
-    readonly static int _epochTrainingLimit = 250;
+    readonly static int _epochTrainingLimit = 9999;
     readonly static int _epochTrainingWastedStop = 20;
     readonly static int _epochTrainingMin = 100;
 
@@ -47,7 +47,7 @@ public class AntiCheatTrainer
         using CrossEntropyLoss criterion = new CrossEntropyLoss();
         using Prodigy optimizer = new Prodigy(_model.parameters(), weightDecay: .1f, decouple: true);
 
-        //lr_scheduler.LRScheduler scheduler = lr_scheduler.CosineAnnealingLR(optimizer, _epochTrainingLimit);
+        lr_scheduler.LRScheduler scheduler = lr_scheduler.CosineAnnealingLR(optimizer, _epochTrainingLimit);
         //optim.lr_scheduler.LRScheduler scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode: "min", factor: 0.5, patience: 5, verbose: true, min_lr: [1e-6]);
 
         TrainEpochs(optimizer, null, criterion, tokenProvider, progressReporter);
@@ -75,9 +75,9 @@ public class AntiCheatTrainer
             lastLoss = loss;
 
 
-            progress.SetProgressTitle($"Epoch {currentEpoch} (Accuracy: {accuracy}, Loss: {loss}, LR: {optimizer.ParamGroups.First().LearningRate}) ");
-            progress.SetMaxProgress(double.MaxValue);
-            progress.SetCurrentProgress(currentEpoch);
+            //progress.SetProgressTitle($"Epoch {currentEpoch} (Accuracy: {accuracy}, Loss: {loss}, LR: {optimizer.ParamGroups.First().LearningRate}) ");
+            //progress.SetMaxProgress(double.MaxValue);
+            //progress.SetCurrentProgress(currentEpoch);
 
             if (accuracy < bestAccuracy)
             {
@@ -104,14 +104,16 @@ public class AntiCheatTrainer
     {
         float runningLoss = 0;
         float accuracy = 0;
+        float avgLoss = 0;
+        float avgAccuracy = 0;
 
         progress.SetMaxProgress(tokenProvider.TotalReplays);
-        progress.SetProgressTitle($"Replay 0 / {tokenProvider.TotalReplays}");
+        //progress.SetProgressTitle($"Replay 0 / {tokenProvider.TotalReplays}");
 
         int replayCounter = 0;
         foreach (ReplayDatasetEntry entry in tokenProvider)
         {
-            progress.SetProgressTitle($"Epoch {epoch} Replay {replayCounter} / {tokenProvider.TotalReplays} (Accuracy: {lastAccuracy}, Loss: {lastLoss}, LR: {optimizer.ParamGroups.First().LearningRate}) ");
+            progress.SetProgressTitle($"Epoch {epoch} Replay {replayCounter} / {tokenProvider.TotalReplays} (Accuracy: {avgAccuracy:n4}, Loss: {avgLoss:n4}, LR: {optimizer.ParamGroups.First().LearningRate}) ");
             progress.Increment();
 
             using (IDisposable disposeScope = NewDisposeScope())
@@ -125,23 +127,44 @@ public class AntiCheatTrainer
                 using Tensor labels = tensor(labelsArray);
 
                 using LstmData data = _model.RunInference(entry.ReplayTokens, true);
-                using Tensor segmentOutputs = data.Data.ToArray<float>();
+                float[] segments = data.Data.ToArray<float>();
+                using Tensor segmentOutputs = segments;
 
                 using Tensor loss = criterion.forward(segmentOutputs.requires_grad_(), labels.requires_grad_());
 
                 loss.backward();
 
-                nn.utils.clip_grad_norm_(_model.parameters(), 1.0);
-
                 runningLoss += loss.item<float>();
                 replayCounter++;
 
+                int tempAcc = 0;
+                for (int i = 0; i < segments.Length; i++)
+                {
+                    switch (entry.Class)
+                    {
+                        case ReplayDatasetClass.Normal:
+                            if (segments[i] < .5f)
+                                tempAcc++;
+                            break;
+
+                        case ReplayDatasetClass.Relax:
+                            if (segments[i] >= .5f)
+                                tempAcc++;
+                            break;
+                    }
+                }
+
+                tempAcc /= segments.Length;
+                accuracy += tempAcc;
             }
 
             using Tensor optimizerStep = optimizer.step();
 
             if (replayCounter % 100 == 0)
                 GC.Collect();
+
+            avgAccuracy = accuracy / replayCounter;
+            avgLoss = runningLoss / replayCounter;
         }
 
         _model.train();

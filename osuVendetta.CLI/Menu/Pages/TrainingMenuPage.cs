@@ -61,7 +61,7 @@ public class TrainingMenuPage : MenuPage
                     progress.Increment(value);
                     processedReplays += value;
 
-                    if (processedReplays >= 3999)
+                    if (processedReplays >= 40)
                     {
                         processedReplays = 0;
                         start = DateTime.Now;
