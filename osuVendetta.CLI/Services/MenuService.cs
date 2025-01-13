@@ -11,13 +11,13 @@ namespace osuVendetta.CLI.Services;
 /// </summary>
 public class MenuService : IHostedService
 {
-    readonly Stack<MenuPage> _pageStack;
+    readonly Stack<(MenuPage, IServiceScope)> _pageStack;
     readonly IServiceProvider _serviceProvider;
     readonly IHostApplicationLifetime _lifetime;
 
     public MenuService(IServiceProvider serviceProvider, IHostApplicationLifetime lifetime)
     {
-        _pageStack = new Stack<MenuPage>();
+        _pageStack = new Stack<(MenuPage, IServiceScope)>();
         _serviceProvider = serviceProvider;
         _lifetime = lifetime;
     }
@@ -30,7 +30,7 @@ public class MenuService : IHostedService
     /// <exception cref="NullReferenceException"></exception>
     public async Task<bool> Display()
     {
-        MenuPage currentPage = _pageStack.Peek();
+        (MenuPage currentPage, _) = _pageStack.Peek();
 
         AnsiConsole.Clear();
 
@@ -75,8 +75,8 @@ public class MenuService : IHostedService
         if (_pageStack.Count == 1)
             return;
 
-        MenuPage page = _pageStack.Pop();
-        page.Dispose();
+        (MenuPage page, IServiceScope scope) = _pageStack.Pop();
+        scope.Dispose();
     }
 
     /// <summary>
@@ -91,23 +91,14 @@ public class MenuService : IHostedService
 
         try
         {
-            object? menuPageObj = Activator.CreateInstance(menuPageType, serviceScope);
-
-            if (menuPageObj is null)
-                throw new InvalidOperationException($"Unable to create instance of type: {menuPageType.FullName}");
-
-            if (menuPageObj is not MenuPage page)
-                throw new InvalidOperationException($"Invalid constructor for menu page: {menuPageType.FullName}");
-
-            menuPage = page;
+            menuPage = (MenuPage)ActivatorUtilities.CreateInstance(serviceScope.ServiceProvider, menuPageType);
+            _pageStack.Push((menuPage, serviceScope));
         }
         catch (Exception)
         {
             serviceScope.Dispose();
             throw;
         }
-
-        _pageStack.Push(menuPage);
     }
 
     /// <summary>

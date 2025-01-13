@@ -13,10 +13,9 @@ public class BenchmarkMenuPage : MenuPage
 {
     readonly IAntiCheatBenchmarkRunner _antiCheatBenchmarkRunner;
 
-    public BenchmarkMenuPage(IServiceScope serviceScope) : base(serviceScope)
+    public BenchmarkMenuPage(IAntiCheatBenchmarkRunner antiCheatBenchmarkRunner)
     {
-        _antiCheatBenchmarkRunner = serviceScope.ServiceProvider.GetService<IAntiCheatBenchmarkRunner>()
-            ?? throw new InvalidOperationException("Benchmark runner not registered as service");
+        _antiCheatBenchmarkRunner = antiCheatBenchmarkRunner;
     }
 
     public override async Task<MenuPageResponse> Display()

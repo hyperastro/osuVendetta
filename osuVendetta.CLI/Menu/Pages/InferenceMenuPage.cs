@@ -25,13 +25,10 @@ public class InferenceMenuPage : MenuPage
     readonly IAntiCheatModel _antiCheatModel;
     readonly IReplayProcessor _replayProcessor;
 
-    public InferenceMenuPage(IServiceScope serviceScope) : base(serviceScope)
+    public InferenceMenuPage(IAntiCheatModel antiCheatModel, IReplayProcessor replayProcessor)
     {
-        _antiCheatModel = serviceScope.ServiceProvider.GetService<IAntiCheatModel>()
-            ?? throw new InvalidOperationException("AntiCheatModel not registered as service");
-
-        _replayProcessor = serviceScope.ServiceProvider.GetService<IReplayProcessor>()
-            ?? throw new InvalidOperationException("Replay processor not registered as service");
+        _antiCheatModel = antiCheatModel;
+        _replayProcessor = replayProcessor;
     }
 
     public override async Task<MenuPageResponse> Display()
