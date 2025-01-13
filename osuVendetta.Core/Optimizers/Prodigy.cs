@@ -149,13 +149,13 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                 {
                     state.Step = 0;
 
-                    state.S = state.S.DisposeAndReplace(zeros_like(p.flatten().index(TensorIndex.Slice(null, null, sliceP))).detach(), true);
+                    state.S = state.S.DisposeAndReplace(zeros_like(p.flatten().slice(0, 0, -1, sliceP)).detach(), true);
 
                     Tensor pAny = p.any();
                     bool[] pAnyData = pAny.ToArray<bool>();
 
                     if (pAnyData.Any())
-                        state.P0 = state.P0.DisposeAndReplace(p.flatten().index(TensorIndex.Slice(null, null, sliceP)).detach().clone(), true);
+                        state.P0 = state.P0.DisposeAndReplace(p.flatten().slice(0, 0, -1, sliceP).detach().clone(), true);
                     else
                         // All values are zero, so save VRAM with a zero-tensor
                         state.P0 = state.P0.DisposeAndReplace(tensor(0, device: p.device, dtype: p.dtype), true);
@@ -178,8 +178,8 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                 {
                     // we use d / d0 instead of just d to avoid getting values that are too small
 
-                    Tensor slicedGrad = grad.flatten().index(TensorIndex.Slice(null, null, sliceP));
-                    deltaNumerator += (d / d0) * dlr * dot(slicedGrad, p0 - p0.flatten().index(TensorIndex.Slice(0, 0, sliceP)));
+                    Tensor slicedGrad = grad.flatten().slice(0, 0, -1, sliceP);
+                    deltaNumerator += (d / d0) * dlr * dot(slicedGrad, p0 - p0.flatten().slice(0, 0, -1, sliceP));
 
                     //# Adam EMA updates
                     if (beta1.item<float>() > 0)

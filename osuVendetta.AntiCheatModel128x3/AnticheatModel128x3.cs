@@ -121,7 +121,7 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
         //using Tensor fc = _fc.forward(dropOut);
 
         using LstmData lstm = _lstm.forward(input.Data, input.HiddenState);
-        using Tensor lstmData = lstm.Data.select(1, -1);
+        using Tensor lstmData = lstm.Data[TensorIndex.Colon, -1, TensorIndex.Colon];
         using Tensor dropOut = _dropOut.forward(lstmData);
         using Tensor fc = _fc.forward(dropOut);
 

@@ -12,6 +12,9 @@ using Spectre.Console;
 using Spectre.Console.Cli;
 using System.ComponentModel;
 using System.Diagnostics;
+using Tensorboard;
+using TorchSharp;
+using static TorchSharp.torch;
 
 namespace osuVendetta.CLI;
 
