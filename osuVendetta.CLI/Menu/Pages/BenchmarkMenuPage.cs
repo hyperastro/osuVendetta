@@ -18,7 +18,7 @@ public class BenchmarkMenuPage : MenuPage
         _antiCheatBenchmarkRunner = antiCheatBenchmarkRunner;
     }
 
-    public override async Task<MenuPageResponse> Display()
+    public override async Task<MenuPageResponse> DisplayAsync()
     {
         AnsiConsole.WriteLine("Running benchmark...");
 

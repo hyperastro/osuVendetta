@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using TorchSharp;
 using static TorchSharp.torch;
 
-namespace osuVendetta.Core.IO;
+namespace osuVendetta.Core.IO.Safetensors;
 public class Safetensors
 {
     public SafetensorsJsonHeader Header { get; private set; }
@@ -23,7 +23,7 @@ public class Safetensors
     public static Safetensors Load(string file)
     {
         using FileStream fileStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
-        
+
         return Load(fileStream);
     }
 

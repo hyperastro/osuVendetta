@@ -31,7 +31,7 @@ public class InferenceMenuPage : MenuPage
         _replayProcessor = replayProcessor;
     }
 
-    public override async Task<MenuPageResponse> Display()
+    public override async Task<MenuPageResponse> DisplayAsync()
     {
         List<FileInfo> replaysToProcess = PromptForReplays();
         List<InferenceReplayResult> processedReplays = ProcessReplays(replaysToProcess);

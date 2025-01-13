@@ -26,8 +26,15 @@ public class Prodigy : OptimizerHelper, optim.IBetas
         }
     }
 
-    // Skyfly: are the parameters required here? doesn't seem to be used in the base constructor
-    public Prodigy(/*IEnumerable<Parameter> parameters, */float learningRate = 1, float beta1 = .9f, float beta2 = .999f, float? beta3 = null,
+    public Prodigy(IEnumerable<Parameter> parameters, float learningRate = 1, float beta1 = .9f, float beta2 = .999f, float? beta3 = null,
+        float eps = 1e-8f, float weightDecay = 0, bool decouple = true, bool useBiasCorrection = false,
+        bool safeguardWarmup = false, float d0 = 1e-6f, float dCoef = 1f, float growthRate = float.PositiveInfinity,
+        long sliceP = 1) :
+        this([ new ParamGroup(parameters) ], learningRate, beta1, beta2, beta3, eps, weightDecay, decouple, useBiasCorrection, safeguardWarmup, 
+            d0, dCoef, growthRate, sliceP)
+    {
+    }
+    public Prodigy(IEnumerable<ParamGroup> parameters, float learningRate = 1, float beta1 = .9f, float beta2 = .999f, float? beta3 = null,
         float eps = 1e-8f, float weightDecay = 0, bool decouple = true, bool useBiasCorrection = false,
         bool safeguardWarmup = false, float d0 = 1e-6f, float dCoef = 1f, float growthRate = float.PositiveInfinity,
         long sliceP = 1)
@@ -54,6 +61,10 @@ public class Prodigy : OptimizerHelper, optim.IBetas
             FsdpInUse = false,
             SliceP = sliceP
         };
+
+        _parameter_groups = new List<TorchSharp.Modules.ParamGroup>();
+        foreach (ParamGroup group in parameters)
+            add_param_group(group);
     }
 
     public override Tensor step(Func<Tensor>? closure = null)
@@ -138,23 +149,23 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                 {
                     state.Step = 0;
 
-                    state.S = zeros_like(p.flatten().index(TensorIndex.Slice(null, null, sliceP))).detach();
+                    state.S = state.S.DisposeAndReplace(zeros_like(p.flatten().index(TensorIndex.Slice(null, null, sliceP))).detach(), true);
 
                     Tensor pAny = p.any();
                     bool[] pAnyData = pAny.ToArray<bool>();
 
                     if (pAnyData.Any())
-                        state.P0 = p.flatten().index(TensorIndex.Slice(null, null, sliceP)).detach().clone();
+                        state.P0 = state.P0.DisposeAndReplace(p.flatten().index(TensorIndex.Slice(null, null, sliceP)).detach().clone(), true);
                     else
                         // All values are zero, so save VRAM with a zero-tensor
-                        state.P0 = tensor(0, device: p.device, dtype: p.dtype);
+                        state.P0 = state.P0.DisposeAndReplace(tensor(0, device: p.device, dtype: p.dtype), true);
 
                     // Exponential moving average of gradient values
                     if (beta1.item<float>() > 0)
-                        state.ExpAvg = zeros_like(p).detach();
+                        state.ExpAvg = state.ExpAvg.DisposeAndReplace(zeros_like(p).detach(), true);
 
                     // Exponential moving average of squared gradient values
-                    state.ExpAvgSq = zeros_like(p).detach();
+                    state.ExpAvgSq = state.ExpAvgSq.DisposeAndReplace(zeros_like(p).detach(), true);
                 }
 
                 // Skyfly: ExpAvgSq and P0 get their value set in the if scope at line 136~ if (!state.Step.HasValue)
@@ -227,11 +238,11 @@ public class Prodigy : OptimizerHelper, optim.IBetas
 
             foreach (ParamGroup pgroup in _parameter_groups)
             {
-                pgroup.DNumerator = globalDNumerator;
-                pgroup.DDenom = globalDDenom;
-                pgroup.D = d;
-                pgroup.DMax = dMax;
-                pgroup.DHat = dHat;
+                pgroup.DNumerator = pgroup.DNumerator.DisposeAndReplace(globalDNumerator, true);
+                pgroup.DDenom = pgroup.DDenom.DisposeAndReplace(globalDNumerator, true);
+                pgroup.D = pgroup.D.DisposeAndReplace(globalDNumerator, true);
+                pgroup.DMax = pgroup.DMax.DisposeAndReplace(globalDNumerator, true);
+                pgroup.DHat = pgroup.DHat.DisposeAndReplace(globalDNumerator, true);
 
                 foreach (Parameter p in pgroup.Parameters)
                 {
@@ -270,6 +281,37 @@ public class Prodigy : OptimizerHelper, optim.IBetas
             }
         }, closure);
     }
+
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+
+        foreach ((nint, OptimizerState) statePair in _state)
+            ((State)statePair.Item2).Dispose();
+    }
+
+    public override void add_param_group(TorchSharp.Modules.ParamGroup paramGroup)
+    {
+        Options defaultOptions = (Options)_defaults;
+        Options? options = (Options?)paramGroup.Options;
+
+        if (options is null)
+            paramGroup.Options = options = defaultOptions.CreateCopy();
+
+        paramGroup.Options.InitialLearningRate = defaultOptions.LearningRate ?? 1;
+
+
+        _parameter_groups.Add(paramGroup);
+
+        foreach (Parameter parameter in paramGroup.Parameters)
+        {
+            State state = new State(parameter);
+            _state[parameter.Handle] = state;
+            state.Initialize(options);
+        }
+    }
+
 
     public class State : OptimizerState, IDisposable
     {
@@ -380,6 +422,30 @@ public class Prodigy : OptimizerHelper, optim.IBetas
         public required bool FsdpInUse { get; set; }
         public required long SliceP { get; set; }
         public required float K { get; set; }
+
+        public Options CreateCopy()
+        {
+            return new Options
+            {
+                Beta1 = Beta1,
+                Beta2 = Beta2,
+                Beta3 = Beta3,
+                Eps = Eps,
+                WeightDecay = WeightDecay,
+                Decouple = Decouple,
+                UseBiasCorrection = UseBiasCorrection,
+                SafeguardWarmup = SafeguardWarmup,
+                D0 = D0,
+                DMax = DMax,
+                D = D,
+                DCoef = DCoef,
+                DNumerator = DNumerator,
+                GrowthRate = GrowthRate,
+                FsdpInUse = FsdpInUse,
+                SliceP = SliceP,
+                K = K
+            };
+        }
     }
 
     public class ParamGroup : ParamGroup<Options>, optim.IBetas/*, IDisposable*/

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace osuVendetta.Core.IO;
+namespace osuVendetta.Core.IO.Safetensors;
 
 public class SafetensorsJsonHeader : Dictionary<string, SafetensorsJsonHeaderEntry>
 {

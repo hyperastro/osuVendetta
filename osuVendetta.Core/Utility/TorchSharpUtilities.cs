@@ -33,4 +33,14 @@ public static class TorchSharpUtilities
 
         return accessor.ToArray();
     }
+
+    public static Tensor? DisposeAndReplace(this Tensor? tensor, Tensor? newTensor, bool moveToOuterScope)
+    {
+        tensor?.Dispose();
+
+        if (moveToOuterScope)
+            return newTensor?.MoveToOuterDisposeScope();
+        else
+            return newTensor;
+    }
 }

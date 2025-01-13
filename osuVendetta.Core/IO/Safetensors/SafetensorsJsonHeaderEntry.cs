@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json.Serialization;
 
-namespace osuVendetta.Core.IO;
+namespace osuVendetta.Core.IO.Safetensors;
 
 public class SafetensorsJsonHeaderEntry
 {
@@ -25,7 +25,7 @@ public class SafetensorsJsonHeaderEntry
         sb.AppendLine();
 
         sb.AppendLine("DataOffsets: ");
-        foreach(int dataOffset in DataOffsets)
+        foreach (int dataOffset in DataOffsets)
             sb.Append($"{dataOffset}, ");
         sb.Remove(sb.Length - 2, 2);
         sb.AppendLine();

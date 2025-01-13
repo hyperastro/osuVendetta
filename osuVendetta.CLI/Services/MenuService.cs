@@ -34,7 +34,7 @@ public class MenuService : IHostedService
 
         AnsiConsole.Clear();
 
-        MenuPageResponse? pageResponse = await currentPage.Display();
+        MenuPageResponse? pageResponse = await currentPage.DisplayAsync();
 
         switch (pageResponse.ResponseType)
         {
