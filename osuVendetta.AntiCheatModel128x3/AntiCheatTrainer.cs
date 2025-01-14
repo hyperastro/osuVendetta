@@ -9,8 +9,44 @@ using System.Numerics;
 
 namespace osuVendetta.AntiCheatModel128x3;
 
+public class EpochTrainingParameters : IDisposable
+{
+    public bool IsDisposed { get; private set; }
+
+    public OptimizerHelper Optimizer { get; }
+    public WeightedLoss<Tensor, Tensor, Tensor> LossCriterion { get; }
+    public lr_scheduler.LRScheduler? Scheduler { get; set; }
+
+    public EpochTrainingParameters(OptimizerHelper optimizer, 
+        WeightedLoss<Tensor, Tensor, Tensor> lossCriterion)
+    {
+        Optimizer = optimizer;
+        LossCriterion = lossCriterion;
+    }
+
+    public void Dispose()
+    {
+        if (IsDisposed)
+            return;
+
+        Optimizer.Dispose();
+        LossCriterion.Dispose();
+
+        IsDisposed = true;
+    }
+}
+
 public class AntiCheatTrainer
 {
+    record class EpochParameters(
+        int Epoch,
+        float MaxGradNorm,
+        float avgAccuracy,
+        float avgLoss,
+        EpochTrainingParameters Parameters,
+        IReplayDatasetProvider DatasetProvider,
+        IProgressReporter ProgressReporter);
+
     readonly static int _epochTrainingLimit = 9999;
     readonly static int _epochTrainingWastedStop = 20;
     readonly static int _epochTrainingMin = 100;
@@ -27,59 +63,77 @@ public class AntiCheatTrainer
         // implement hyperparameter search
         // implement progress reports
 
+        PrepareModel();
+
+        using EpochTrainingParameters parameters = new EpochTrainingParameters(
+            CreateOptimizer(),
+            CreateLossCriterion());
+
+        parameters.Scheduler = CreateScheduler(parameters.Optimizer);
+
+        TrainEpochs(parameters, tokenProvider, progressReporter);
+    }
+
+    OptimizerHelper CreateOptimizer()
+    {
+        //return new AdamW(_model.parameters(), lr: 0.002, weight_decay: 1e-3);
+        return new Prodigy(_model.parameters(), weightDecay: .1f, decouple: true);
+    }
+
+    WeightedLoss<Tensor, Tensor, Tensor> CreateLossCriterion()
+    {
+        return new BCEWithLogitsLoss();
+    }
+
+    lr_scheduler.LRScheduler? CreateScheduler(OptimizerHelper optimizer)
+    {
+        //return lr_scheduler.CosineAnnealingLR(optimizer, _epochTrainingLimit);
+        //return lr_scheduler.ReduceLROnPlateau(optimizer, mode: "min", factor: 0.5, patience: 5, verbose: true, min_lr: [1e-6]);
+        return null;
+    }
+
+
+    void PrepareModel()
+    {
+        autograd.set_detect_anomaly(true);
         set_default_device(torch.device(DeviceType.CUDA));
+
         _model.SetDevice(DeviceType.CUDA);
 
         if (!_model.training)
             _model.train();
-
-        autograd.set_detect_anomaly(true);
-
-        Dictionary<ReplayDatasetClass, int> totalReplayCounts = new Dictionary<ReplayDatasetClass, int>
-        {
-            { ReplayDatasetClass.Normal, tokenProvider.GetTotalReplays(ReplayDatasetClass.Normal) },
-            { ReplayDatasetClass.Relax, tokenProvider.GetTotalReplays(ReplayDatasetClass.Relax) }
-        };
-
-        //using Tensor classWeights = CreateClassWeights(totalReplayCounts);
-        //using CrossEntropyLoss criterion = new CrossEntropyLoss();
-        using Prodigy optimizer = new Prodigy(_model.parameters(), weightDecay: .1f, decouple: true);
-        //lr_scheduler.LRScheduler scheduler = lr_scheduler.CosineAnnealingLR(optimizer, _epochTrainingLimit);
-
-        using BCEWithLogitsLoss criterion = new BCEWithLogitsLoss();
-        //using AdamW optimizer = new AdamW(_model.parameters(), lr: 0.002, weight_decay: 1e-3);
-        //lr_scheduler.LRScheduler scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode: "min", factor: 0.5, patience: 5, verbose: true, min_lr: [1e-6]);
-
-        TrainEpochs(optimizer, /*scheduler*/null, criterion, tokenProvider, progressReporter);
     }
 
-    void TrainEpochs(OptimizerHelper optimizer, lr_scheduler.LRScheduler? scheduler, BCEWithLogitsLoss criterion,
-        IReplayDatasetProvider tokenProvider, IProgressReporter progress)
+    void TrainEpochs(EpochTrainingParameters parameters, IReplayDatasetProvider tokenProvider, IProgressReporter progress)
     {
         float maxGradNorm = 1;
 
         Dictionary<string, Tensor> bestState = _model.state_dict();
-        float bestAccuracy = 0;
-        int bestEpoch = 0;
-        int currentEpoch = 0;
 
-        float lastAccuracy = 0;
-        float lastLoss = 0;
+        float totalAccuracy = 0;
+        float avgAccuracy = 0;
+
+        float totalLoss = 0;
+        float avgLoss = 0;
+        
+        int currentEpoch = 0;
+        int bestEpoch = 0;
+        float bestEpochAccuracy = 0;
 
         int epochsWithoutImprovement = 0;
         while (epochsWithoutImprovement < _epochTrainingWastedStop &&
                currentEpoch < _epochTrainingLimit)
         {
-            (float loss, float accuracy) = TrainEpoch(currentEpoch, maxGradNorm, optimizer, scheduler, criterion, tokenProvider, progress, lastAccuracy, lastLoss);
-            lastAccuracy = accuracy;
-            lastLoss = loss;
+            EpochParameters epochParams = new EpochParameters(
+                currentEpoch, maxGradNorm, avgAccuracy, 
+                avgLoss, parameters, tokenProvider, progress);
 
+            (float runningLoss, float runningAccuracy) = TrainEpoch(epochParams);
 
-            //progress.SetProgressTitle($"Epoch {currentEpoch} (Accuracy: {accuracy}, Loss: {loss}, LR: {optimizer.ParamGroups.First().LearningRate}) ");
-            //progress.SetMaxProgress(double.MaxValue);
-            //progress.SetCurrentProgress(currentEpoch);
+            totalAccuracy += runningAccuracy;
+            totalLoss += runningLoss;
 
-            if (accuracy < bestAccuracy)
+            if (runningAccuracy < bestEpochAccuracy)
             {
                 // train for atleast X epochs before starting to count for bad epochs
                 if (currentEpoch >= _epochTrainingMin)
@@ -90,197 +144,107 @@ public class AntiCheatTrainer
                 epochsWithoutImprovement = 0;
                 bestState = _model.state_dict();
                 bestEpoch = currentEpoch;
-                bestAccuracy = accuracy;
+                bestEpochAccuracy = runningAccuracy;
             }
 
             currentEpoch++;
+            avgAccuracy = totalAccuracy / currentEpoch;
+            avgLoss = totalLoss / currentEpoch;
         }
 
         _model.load_state_dict(bestState);
     }
 
-    (float loss, float accuracy) TrainEpoch(int epoch, float maxGradNorm, OptimizerHelper optimizer,
-        lr_scheduler.LRScheduler? scheduler, BCEWithLogitsLoss criterion, IReplayDatasetProvider tokenProvider,
-        IProgressReporter progress, float lastAccuracy, float lastLoss)
+    (float runningLoss, float runningAccuracy) TrainEpoch(EpochParameters parameters)
     {
-        float runningLoss = 0;
-        float accuracy = 0;
+        float totalLoss = 0;
         float avgLoss = 0;
+
+        float totalAccuracy = 0;
         float avgAccuracy = 0;
 
-        progress.SetMaxProgress(tokenProvider.TotalReplays);
-        //progress.SetProgressTitle($"Replay 0 / {tokenProvider.TotalReplays}");
+        parameters.ProgressReporter.SetMaxProgress(parameters.DatasetProvider.TotalReplays);
 
         int replayCounter = 0;
-        foreach (ReplayDatasetEntry entry in tokenProvider)
+        foreach (ReplayDatasetEntry entry in parameters.DatasetProvider)
         {
-            progress.SetProgressTitle($"Epoch {epoch} Replay {replayCounter} / {tokenProvider.TotalReplays} (Accuracy: {avgAccuracy:n8}, Loss: {avgLoss:n8}, LR: {optimizer.ParamGroups.First().LearningRate}) ");
-            progress.Increment();
+            parameters.ProgressReporter.SetProgressTitle(
+$"Epoch {parameters.Epoch} Replay {replayCounter} / {parameters.DatasetProvider.TotalReplays} " +
+$"(Avg Accuracy: {avgAccuracy:n8}, Avg Loss: {avgLoss:n8}) ");
+
+            parameters.ProgressReporter.Increment();
 
             using (IDisposable disposeScope = NewDisposeScope())
             {
-                optimizer.zero_grad();
+                (float runningLoss, float runningAccuracy) = Step(parameters, entry);
 
-                float[] labelsArray = new float[(int)Math.Ceiling(entry.ReplayTokens.Tokens.Length / (double)_model.Config.TotalFeatureSizePerChunk)];
-                for (int i = 0; i < labelsArray.Length; i++)
-                    labelsArray[i] = (int)entry.Class;
+                totalLoss += runningLoss;
+                totalAccuracy += runningAccuracy;
 
-                using Tensor labels = tensor(labelsArray);
-
-                using LstmData data = _model.RunInference(entry.ReplayTokens, true);
-                float[] segments = data.Data.ToArray<float>();
-                using Tensor segmentOutputs = segments;
-
-                using Tensor loss = criterion.forward(segmentOutputs.requires_grad_(), labels.requires_grad_());
-
-                loss.backward();
-                nn.utils.clip_grad_norm_(_model.parameters(), maxGradNorm);
-
-                runningLoss += loss.item<float>();
                 replayCounter++;
 
-                using Tensor segmentsSigmoid = sigmoid(data.Data);
-                segments = segmentsSigmoid.ToArray<float>();
-
-                int tempAcc = 0;
-                for (int i = 0; i < segments.Length; i++)
-                {
-                    switch (entry.Class)
-                    {
-                        case ReplayDatasetClass.Normal:
-                            if (segments[i] < .5f)
-                                tempAcc++;
-                            break;
-
-                        case ReplayDatasetClass.Relax:
-                            if (segments[i] >= .5f)
-                                tempAcc++;
-                            break;
-                    }
-                }
-
-                tempAcc /= segments.Length;
-                accuracy += tempAcc;
+                avgLoss = totalLoss / replayCounter;
+                avgAccuracy = totalAccuracy / replayCounter;
             }
-
-            using Tensor optimizerStep = optimizer.step();
-
-            if (replayCounter % 100 == 0)
-                GC.Collect();
-
-            avgAccuracy = accuracy / replayCounter;
-            avgLoss = runningLoss / replayCounter;
         }
 
         _model.train();
-        scheduler?.step(runningLoss, epoch);
-        return (runningLoss, accuracy);
+        parameters.Parameters.Scheduler?.step(avgLoss, parameters.Epoch);
+
+        return (avgLoss, avgAccuracy);
     }
 
-    Tensor CreateClassWeights(Dictionary<ReplayDatasetClass, int> replayCount)
+    (float runningLoss, float runningAccuracy) Step(EpochParameters parameters, ReplayDatasetEntry entry)
     {
-        int[] classCounts = replayCount.OrderBy(kvp => (int)kvp.Key).Select(kvp => kvp.Value).ToArray();
-        int totalClassCounts = classCounts.Sum();
-        float[] classWeights = classCounts.Select(v => (float)(totalClassCounts / v)).ToArray();
+        parameters.Parameters.Optimizer.zero_grad();
 
-        return tensor(classWeights);
+        float[] labelsArray = new float[(int)Math.Ceiling(entry.ReplayTokens.Tokens.Length / (double)_model.Config.TotalFeatureSizePerChunk)];
+        for (int i = 0; i < labelsArray.Length; i++)
+            labelsArray[i] = (int)entry.Class;
+
+        Tensor labels = tensor(labelsArray);
+
+        LstmData data = _model.RunInference(entry.ReplayTokens, true);
+        float[] segments = data.Data.ToArray<float>();
+        Tensor segmentOutputs = segments;
+
+        Tensor loss = parameters.Parameters.LossCriterion.forward(segmentOutputs.requires_grad_(), labels.requires_grad_());
+
+        loss.backward();
+        nn.utils.clip_grad_norm_(_model.parameters(), parameters.MaxGradNorm);
+        _ = parameters.Parameters.Optimizer.step();
+
+        float runningLoss = loss.item<float>();
+        float runningAccuracy = LogitsToAccuracy(data.Data, entry.Class);
+
+        return (runningLoss, runningAccuracy);
     }
 
+    float LogitsToAccuracy(Tensor logits, ReplayDatasetClass @class)
+    {
+        float[] segments = sigmoid(logits).ToArray<float>();
+        
+        float accuracy = segments.Sum(segment =>
+        {
+            switch (@class)
+            {
+                case ReplayDatasetClass.Normal:
+                    if (segment < .5f)
+                        return 1f;
+                    else
+                        return 0f;
 
+                case ReplayDatasetClass.Relax:
+                    if (segment >= .5f)
+                        return 1f;
+                    else
+                        return 0f;
 
-    // AdamW impl
-    //public void RunTraining(IReplayTokenProvider tokenProvider, IProgressReporter progressReporter)
-    //{
-    //    // implement prodigy https://github.com/konstmish/prodigy/blob/main/prodigyopt/prodigy.py
-    //    // implement hyperparameter search
-    //    // implement progress reports
+                default:
+                    throw new InvalidOperationException($"Unkown class type {@class}");
+            }
+        });
 
-    //    if (!training)
-    //        train();
-
-    //    Dictionary<AntiCheatClass, int> replayCount = tokenProvider.GetReplayCount();
-
-    //    using Tensor labels = CreateTrainingLabels();
-    //    using Tensor classWeights = CreateClassWeights(replayCount);
-    //    using BCEWithLogitsLoss criterion = new BCEWithLogitsLoss(pos_weights: classWeights);
-    //    using AdamW optimizer = new AdamW(parameters(), lr: 0.002, weight_decay: 1e-3);
-    //    //using Prodigy optimizer = new Prodigy();
-
-    //    optim.lr_scheduler.LRScheduler scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode: "min", factor: 0.5, patience: 5, verbose: true, min_lr: [1e-6]);
-
-    //    TrainEpochs(optimizer, criterion, tokenProvider, labels);
-    //}
-
-    //void TrainEpochs(AdamW optimizer, BCEWithLogitsLoss criterion, 
-    //    IReplayTokenProvider tokenProvider, Tensor labels)
-    //{
-    //    float maxGradNorm = 1;
-
-    //    Dictionary<string, Tensor> bestState = state_dict();
-    //    float bestAccuracy = 0;
-    //    int bestEpoch = 0;
-    //    int currentEpoch = 0;
-    //    int epochsWithoutImprovement = 0;
-    //    int wastedEpochsToStopAt = 20;
-    //    int minEpochs = 100;
-
-    //    while (epochsWithoutImprovement >= wastedEpochsToStopAt)
-    //    {
-    //        (float loss, float accuracy) = TrainEpoch(currentEpoch, maxGradNorm, optimizer, criterion, tokenProvider, labels);
-
-    //        if (accuracy < bestAccuracy)
-    //        {
-    //            // train for atleast X epochs before starting to count for bad epochs
-    //            if (currentEpoch >= minEpochs)
-    //                epochsWithoutImprovement++;
-    //        }
-    //        else
-    //        {
-    //            epochsWithoutImprovement = 0;
-    //            bestState = state_dict();
-    //            bestEpoch = currentEpoch;
-    //        }
-
-    //        currentEpoch++;
-    //    }
-
-    //    load_state_dict(bestState);
-    //}
-
-    //(float loss, float accuracy) TrainEpoch(int epoch, float maxGradNorm, AdamW optimizer, 
-    //    BCEWithLogitsLoss criterion, IReplayTokenProvider tokenProvider, Tensor labels)
-    //{
-    //    float runningLoss = 0;
-    //    optimizer.zero_grad();
-
-    //    foreach (ReplayTokens tokens in tokenProvider)
-    //    {
-    //        using LstmData data = RunInference(tokens, true);
-    //        using Tensor squeezedData = data.Data.squeeze(1);
-    //        using Tensor loss = criterion.forward(squeezedData, labels);
-
-    //        optimizer.zero_grad();
-    //        loss.backward();
-
-    //        _ = nn.utils.clip_grad_norm_(parameters(), maxGradNorm);
-
-    //        using Tensor optimizerStep = optimizer.step();
-
-    //        runningLoss += loss.item<float>();
-    //    }
-
-    //    runningLoss = 0;
-    //    float accuracy = 0;
-
-    //    foreach (ReplayTokens tokens in tokenProvider)
-    //    {
-    //        using LstmData data = RunInference(tokens, false);
-    //        using Tensor squeezedData = data.Data.squeeze(1);
-    //        using Tensor loss = criterion.forward(squeezedData, labels);
-
-    //        runningLoss += loss.item<float>();
-    //    }
-
-    //    return (runningLoss, accuracy);
-    //}
+        return accuracy / segments.Length;
+    }
 }

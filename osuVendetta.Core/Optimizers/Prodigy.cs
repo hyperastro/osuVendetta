@@ -191,12 +191,14 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                     state.Step = 0;
 
                     //			state['s'] = torch.zeros_like(p.data.flatten()[::slice_p]).detach()
+                    state.S?.Dispose();
                     state.S = zeros_like(p.flatten().slice(0, 0, -1, sliceP)).detach().MoveToOuterDisposeScope();
                     //			if p.any():
                     //				state['p0'] = p.flatten()[::slice_p].detach().clone()
                     //			else:
                     //				# All values are zero, so save VRAM with a zero-tensor
                     //				state['p0'] = torch.tensor(0, device=p.device, dtype=p.dtype)
+                    state.P0?.Dispose();
                     if (p.ToArray<bool>().Any())
                         state.P0 = p.flatten().slice(0, 0, -1, sliceP).detach().clone().MoveToOuterDisposeScope();
                     else
@@ -208,17 +210,21 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                     //			# Exponential moving average of squared gradient values
                     //			state['exp_avg_sq'] = torch.zeros_like(p.data).detach()
                     if (beta1 > 0)
+                    {
+                        state.ExpAvg?.Dispose();
                         state.ExpAvg = zeros_like(p).detach().MoveToOuterDisposeScope();
+                    }
 
+                    state.ExpAvgSq?.Dispose();
                     state.ExpAvgSq = zeros_like(p).detach().MoveToOuterDisposeScope();
                 }
 
                 //		exp_avg_sq = state['exp_avg_sq']
-                Tensor expAvgSq = state.ExpAvgSq;
+                Tensor expAvgSq = state.ExpAvgSq!;
                 //		s = state['s']
-                Tensor s = state.S;
+                Tensor s = state.S!;
                 //		p0 = state['p0']
-                Tensor p0 = state.P0;
+                Tensor p0 = state.P0!;
 
                 //		if group_lr > 0.0:
                 if (groupLr > 0)
@@ -235,7 +241,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                     //				exp_avg.mul_(beta1).add_(grad, alpha=d * (1-beta1))
                     if (beta1 > 0)
                     {
-                        Tensor expAvg = state.ExpAvg;
+                        Tensor expAvg = state.ExpAvg!;
                         expAvg.mul_(beta1).add_(grad, alpha: d * (1 - beta1));
                     }
                     //			exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=d * d * (1-beta2))
@@ -330,7 +336,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                 //		state = self.state[p]
                 State state = (State)_state[p.Handle];
                 //		exp_avg_sq = state['exp_avg_sq']
-                Tensor expAvgSq = state.ExpAvgSq;
+                Tensor expAvgSq = state.ExpAvgSq!;
 
                 //		state['step'] += 1
                 state.Step += 1;
@@ -352,7 +358,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                 //			p.data.addcdiv_(grad, denom, value=-dlr * d)
                 if (beta1 > 0)
                 {
-                    Tensor expAvg = state.ExpAvg;
+                    Tensor expAvg = state.ExpAvg!;
                     p.addcdiv_(expAvg, denom, value: -dlr);
                 }
                 else
@@ -616,8 +622,6 @@ public class Prodigy : OptimizerHelper, optim.IBetas
 
     public class State : OptimizerState, IDisposable
     {
-        public bool IsDisposed { get; private set; }
-
         public long? Step { get; set; }
         public Tensor? S { get; set; }
         public Tensor? P0 { get; set; }
@@ -630,9 +634,6 @@ public class Prodigy : OptimizerHelper, optim.IBetas
 
         public void Dispose()
         {
-            if (IsDisposed)
-                return;
-
             Step = null;
 
             S?.Dispose();
@@ -647,7 +648,6 @@ public class Prodigy : OptimizerHelper, optim.IBetas
             ExpAvgSq?.Dispose();
             ExpAvgSq = null;
 
-            IsDisposed = true;
             GC.SuppressFinalize(this);
         }
 
