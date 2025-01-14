@@ -191,16 +191,16 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                     state.Step = 0;
 
                     //			state['s'] = torch.zeros_like(p.data.flatten()[::slice_p]).detach()
-                    state.S = zeros_like(p.flatten().slice(0, 0, -1, sliceP)).detach();
+                    state.S = zeros_like(p.flatten().slice(0, 0, -1, sliceP)).detach().MoveToOuterDisposeScope();
                     //			if p.any():
                     //				state['p0'] = p.flatten()[::slice_p].detach().clone()
                     //			else:
                     //				# All values are zero, so save VRAM with a zero-tensor
                     //				state['p0'] = torch.tensor(0, device=p.device, dtype=p.dtype)
                     if (p.ToArray<bool>().Any())
-                        state.P0 = p.flatten().slice(0, 0, -1, sliceP).detach().clone();
+                        state.P0 = p.flatten().slice(0, 0, -1, sliceP).detach().clone().MoveToOuterDisposeScope();
                     else
-                        state.P0 = tensor(0, device: p.device, dtype: p.dtype);
+                        state.P0 = tensor(0, device: p.device, dtype: p.dtype).MoveToOuterDisposeScope();
 
                     //			# Exponential moving average of gradient values
                     //			if beta1 > 0:
@@ -208,9 +208,9 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                     //			# Exponential moving average of squared gradient values
                     //			state['exp_avg_sq'] = torch.zeros_like(p.data).detach()
                     if (beta1 > 0)
-                        state.ExpAvg = zeros_like(p).detach();
+                        state.ExpAvg = zeros_like(p).detach().MoveToOuterDisposeScope();
 
-                    state.ExpAvgSq = zeros_like(p).detach();
+                    state.ExpAvgSq = zeros_like(p).detach().MoveToOuterDisposeScope();
                 }
 
                 //		exp_avg_sq = state['exp_avg_sq']
