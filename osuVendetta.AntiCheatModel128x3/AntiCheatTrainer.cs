@@ -41,19 +41,19 @@ public class AntiCheatTrainer
             { ReplayDatasetClass.Relax, tokenProvider.GetTotalReplays(ReplayDatasetClass.Relax) }
         };
 
-        using Tensor classWeights = CreateClassWeights(totalReplayCounts);
-        //using BCEWithLogitsLoss criterion = new BCEWithLogitsLoss(pos_weights: classWeights);
-        //using AdamW optimizer2 = new AdamW(_model.parameters(), lr: 0.002, weight_decay: 1e-3);
-        using CrossEntropyLoss criterion = new CrossEntropyLoss();
+        //using Tensor classWeights = CreateClassWeights(totalReplayCounts);
+        //using CrossEntropyLoss criterion = new CrossEntropyLoss();
         using Prodigy optimizer = new Prodigy(_model.parameters(), weightDecay: .1f, decouple: true);
+        //lr_scheduler.LRScheduler scheduler = lr_scheduler.CosineAnnealingLR(optimizer, _epochTrainingLimit);
 
-        lr_scheduler.LRScheduler scheduler = lr_scheduler.CosineAnnealingLR(optimizer, _epochTrainingLimit);
-        //optim.lr_scheduler.LRScheduler scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode: "min", factor: 0.5, patience: 5, verbose: true, min_lr: [1e-6]);
+        using BCEWithLogitsLoss criterion = new BCEWithLogitsLoss();
+        //using AdamW optimizer = new AdamW(_model.parameters(), lr: 0.002, weight_decay: 1e-3);
+        //lr_scheduler.LRScheduler scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode: "min", factor: 0.5, patience: 5, verbose: true, min_lr: [1e-6]);
 
-        TrainEpochs(optimizer, null, criterion, tokenProvider, progressReporter);
+        TrainEpochs(optimizer, /*scheduler*/null, criterion, tokenProvider, progressReporter);
     }
 
-    void TrainEpochs(OptimizerHelper optimizer, lr_scheduler.LRScheduler scheduler, CrossEntropyLoss criterion,
+    void TrainEpochs(OptimizerHelper optimizer, lr_scheduler.LRScheduler? scheduler, BCEWithLogitsLoss criterion,
         IReplayDatasetProvider tokenProvider, IProgressReporter progress)
     {
         float maxGradNorm = 1;
@@ -90,6 +90,7 @@ public class AntiCheatTrainer
                 epochsWithoutImprovement = 0;
                 bestState = _model.state_dict();
                 bestEpoch = currentEpoch;
+                bestAccuracy = accuracy;
             }
 
             currentEpoch++;
@@ -99,7 +100,7 @@ public class AntiCheatTrainer
     }
 
     (float loss, float accuracy) TrainEpoch(int epoch, float maxGradNorm, OptimizerHelper optimizer,
-        lr_scheduler.LRScheduler scheduler, CrossEntropyLoss criterion, IReplayDatasetProvider tokenProvider,
+        lr_scheduler.LRScheduler? scheduler, BCEWithLogitsLoss criterion, IReplayDatasetProvider tokenProvider,
         IProgressReporter progress, float lastAccuracy, float lastLoss)
     {
         float runningLoss = 0;
@@ -113,7 +114,7 @@ public class AntiCheatTrainer
         int replayCounter = 0;
         foreach (ReplayDatasetEntry entry in tokenProvider)
         {
-            progress.SetProgressTitle($"Epoch {epoch} Replay {replayCounter} / {tokenProvider.TotalReplays} (Accuracy: {avgAccuracy:n4}, Loss: {avgLoss:n4}, LR: {optimizer.ParamGroups.First().LearningRate}) ");
+            progress.SetProgressTitle($"Epoch {epoch} Replay {replayCounter} / {tokenProvider.TotalReplays} (Accuracy: {avgAccuracy:n8}, Loss: {avgLoss:n8}, LR: {optimizer.ParamGroups.First().LearningRate}) ");
             progress.Increment();
 
             using (IDisposable disposeScope = NewDisposeScope())
@@ -133,9 +134,13 @@ public class AntiCheatTrainer
                 using Tensor loss = criterion.forward(segmentOutputs.requires_grad_(), labels.requires_grad_());
 
                 loss.backward();
+                nn.utils.clip_grad_norm_(_model.parameters(), maxGradNorm);
 
                 runningLoss += loss.item<float>();
                 replayCounter++;
+
+                using Tensor segmentsSigmoid = sigmoid(data.Data);
+                segments = segmentsSigmoid.ToArray<float>();
 
                 int tempAcc = 0;
                 for (int i = 0; i < segments.Length; i++)
@@ -168,7 +173,7 @@ public class AntiCheatTrainer
         }
 
         _model.train();
-        //scheduler.step();
+        scheduler?.step(runningLoss, epoch);
         return (runningLoss, accuracy);
     }
 

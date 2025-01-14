@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TorchSharp;
 using TorchSharp.Utils;
 using static TorchSharp.torch;
 
@@ -42,5 +43,14 @@ public static class TorchSharpUtilities
             return newTensor?.MoveToOuterDisposeScope();
         else
             return newTensor;
+    }
+
+    public static Tensor? MoveToOutmostScope(this Tensor? tensor)
+    {
+        if (tensor is null)
+            return null;
+
+        for (; ; )
+            tensor.MoveToOuterDisposeScope();
     }
 }

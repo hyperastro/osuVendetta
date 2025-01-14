@@ -17,11 +17,6 @@ public class ReplayDatasetInfo
 
     public ReplayDatasetInfo(List<FileInfo> entries)
     {
-        int datasetSize = 20;
-
-        if (entries.Count > datasetSize)
-            entries = entries.Take(datasetSize).ToList();
-
         Entries = entries;
     }
 

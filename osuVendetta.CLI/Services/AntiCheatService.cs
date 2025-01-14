@@ -30,12 +30,12 @@ internal class AntiCheatService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        AnsiConsole.WriteLine("Loading anticheat model...");
+        //AnsiConsole.WriteLine("Loading anticheat model...");
 
-        using FileStream modelStream = File.OpenRead("Data/128x3V2.safetensors");
-        _antiCheatModel.Load(modelStream);
+        //using FileStream modelStream = File.OpenRead("Data/128x3V2.safetensors");
+        //_antiCheatModel.Load(modelStream);
 
-        AnsiConsole.WriteLine("Anticheat model loaded");
+        //AnsiConsole.WriteLine("Anticheat model loaded");
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

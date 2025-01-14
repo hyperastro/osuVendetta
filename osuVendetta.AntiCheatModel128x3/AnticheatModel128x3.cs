@@ -123,9 +123,11 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
         using LstmData lstm = _lstm.forward(input.Data, input.HiddenState);
         using Tensor lstmData = lstm.Data[TensorIndex.Colon, -1, TensorIndex.Colon];
         using Tensor dropOut = _dropOut.forward(lstmData);
-        using Tensor fc = _fc.forward(dropOut);
 
-        Tensor output = sigmoid(fc);
+        //using Tensor fc = _fc.forward(dropOut);
+        //Tensor output = sigmoid(fc);
+
+        Tensor output = _fc.forward(dropOut);
         (Tensor H0, Tensor C0)? hiddenState = lstm.DetachHiddenState();
 
         return new LstmData(output, hiddenState);

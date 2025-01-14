@@ -42,7 +42,7 @@ public class ReplayProcessor : IReplayProcessor
         List<ReplayFrame> frames = replay.ReplayFrames;
 
         // include the first chunk being 1000 frames instead of 500 (-size, +1)
-        int totalChunks = frames.Count / _model.Config.StepsPerChunk;
+        int totalChunks = (int)Math.Ceiling((float)frames.Count / _model.Config.StepsPerChunk);
         //int totalChunks = (int)Math.Ceiling((frames.Count - _model.Config.StepsPerChunk) / (float)_model.Config.StepOverlay) + 1;
         float[] inputs = new float[totalChunks * _model.Config.TotalFeatureSizePerChunk];
 

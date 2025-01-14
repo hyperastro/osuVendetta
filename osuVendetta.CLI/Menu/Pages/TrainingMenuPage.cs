@@ -91,6 +91,6 @@ public class TrainingMenuPage : MenuPage
         Console.ReadLine();
         Console.ReadLine();
 
-        return MenuPageResponse.Exit();
+        return MenuPageResponse.ToMainMenu();
     }
 }
