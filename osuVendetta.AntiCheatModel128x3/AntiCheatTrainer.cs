@@ -95,6 +95,8 @@ public class AntiCheatTrainer
 
     void PrepareModel()
     {
+        PrepareSeed();
+
         autograd.set_detect_anomaly(true);
         set_default_device(torch.device(DeviceType.CUDA));
 
@@ -102,6 +104,16 @@ public class AntiCheatTrainer
 
         if (!_model.training)
             _model.train();
+    }
+
+    void PrepareSeed()
+    {
+        const long SEED = 123456;
+
+        random.manual_seed(SEED);
+        manual_seed(SEED);
+        cuda.manual_seed(SEED);
+        cuda.manual_seed_all(SEED);
     }
 
     void TrainEpochs(EpochTrainingParameters parameters, IReplayDatasetProvider tokenProvider, IProgressReporter progress)
