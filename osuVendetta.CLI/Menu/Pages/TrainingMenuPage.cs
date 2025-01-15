@@ -78,8 +78,8 @@ public class TrainingMenuPage : MenuPage
                 trainer.RunTraining(new ReplayDatasetProvider(
                     _replayProcessor,
                     [
-                        new ReplayDatasetInfo(ReplayDatasetClass.Normal, new DirectoryInfo("C:\\Users\\Unk\\Downloads\\DatasetV1\\DatasetV1\\normal").EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList()),
-                    new ReplayDatasetInfo(ReplayDatasetClass.Relax, new DirectoryInfo("C:\\Users\\Unk\\Downloads\\DatasetV1\\DatasetV1\\relax").EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList())
+                        new ReplayDatasetInfo(ReplayDatasetClass.Normal, new DirectoryInfo("C:\\Users\\Gui\\Downloads\\datasetSmall\\datasetSmall\\tempnorm").EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList()),
+                    new ReplayDatasetInfo(ReplayDatasetClass.Relax, new DirectoryInfo("C:\\Users\\Gui\\Downloads\\datasetSmall\\datasetSmall\\temprelax").EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList())
                     ]),
                     progressReporter);
             });

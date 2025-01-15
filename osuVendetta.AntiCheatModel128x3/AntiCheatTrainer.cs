@@ -6,6 +6,7 @@ using osuVendetta.Core.Optimizers;
 using osuVendetta.Core.IO.Dataset;
 using TorchSharp;
 using System.Numerics;
+using osuVendetta.Core.F1;
 
 namespace osuVendetta.AntiCheatModel128x3;
 
@@ -140,7 +141,7 @@ public class AntiCheatTrainer
                 currentEpoch, maxGradNorm, avgAccuracy, 
                 avgLoss, parameters, tokenProvider, progress);
 
-            (float runningLoss, float runningAccuracy) = TrainEpoch(epochParams);
+            (float runningLoss, float runningAccuracy, float F1score) = TrainEpoch(epochParams);
 
             totalAccuracy += runningAccuracy;
             totalLoss += runningLoss;
@@ -167,13 +168,17 @@ public class AntiCheatTrainer
         _model.load_state_dict(bestState);
     }
 
-    (float runningLoss, float runningAccuracy) TrainEpoch(EpochParameters parameters)
+    (float runningLoss, float runningAccuracy, float f1Score) TrainEpoch(EpochParameters parameters)
     {
         float totalLoss = 0;
         float avgLoss = 0;
 
         float totalAccuracy = 0;
         float avgAccuracy = 0;
+
+        int totalTruePositives = 0;
+        int totalFalsePositives = 0;
+        int totalFalseNegatives = 0;
 
         parameters.ProgressReporter.SetMaxProgress(parameters.DatasetProvider.TotalReplays);
 
@@ -188,10 +193,13 @@ $"(Avg Accuracy: {avgAccuracy:n8}, Avg Loss: {avgLoss:n8}) ");
 
             using (IDisposable disposeScope = NewDisposeScope())
             {
-                (float runningLoss, float runningAccuracy) = Step(parameters, entry);
+                (float runningLoss, float runningAccuracy, int truePositives, int falsePositives, int falseNegatives) = Step(parameters, entry);
 
                 totalLoss += runningLoss;
                 totalAccuracy += runningAccuracy;
+                totalTruePositives += truePositives;
+                totalFalsePositives += falsePositives;
+                totalFalseNegatives += falseNegatives;
 
                 replayCounter++;
 
@@ -202,11 +210,15 @@ $"(Avg Accuracy: {avgAccuracy:n8}, Avg Loss: {avgLoss:n8}) ");
 
         _model.train();
         parameters.Parameters.Scheduler?.step(avgLoss, parameters.Epoch);
+        
+        float f1Score = F1Score.CalculateF1Score(totalTruePositives, totalFalsePositives, totalFalseNegatives);
 
-        return (avgLoss, avgAccuracy);
+        Console.WriteLine($"Epoch {parameters.Epoch} F1 Score: {f1Score:n4}");
+
+        return (avgLoss, avgAccuracy,f1Score);
     }
 
-    (float runningLoss, float runningAccuracy) Step(EpochParameters parameters, ReplayDatasetEntry entry)
+    (float runningLoss, float runningAccuracy, int truePositives, int falsePositives, int falseNegatives) Step(EpochParameters parameters, ReplayDatasetEntry entry)
     {
         parameters.Parameters.Optimizer.zero_grad();
 
@@ -229,7 +241,29 @@ $"(Avg Accuracy: {avgAccuracy:n8}, Avg Loss: {avgLoss:n8}) ");
         float runningLoss = loss.item<float>();
         float runningAccuracy = LogitsToAccuracy(data.Data, entry.Class);
 
-        return (runningLoss, runningAccuracy);
+        // Calculate F1 score directly
+        float[] probabilities = sigmoid(segmentOutputs).ToArray<float>(); //Convert Logits into Probablilties
+        int truePositives = 0, falsePositives = 0, falseNegatives = 0;
+        for (int i = 0; i < probabilities.Length; i++)
+        {
+            bool isPositivePrediction = probabilities[i] >= 0.5f;
+            bool isPositiveLabel = labelsArray[i] == 1;
+
+            if (isPositivePrediction && isPositiveLabel)
+            {
+                truePositives++;
+            }
+            else if (isPositivePrediction && !isPositiveLabel)
+            {
+                falsePositives++;
+            }
+            else if (!isPositivePrediction && isPositiveLabel)
+            {
+                falseNegatives++;
+            }
+        }
+
+        return (runningLoss, runningAccuracy, truePositives, falsePositives, falseNegatives);
     }
 
     float LogitsToAccuracy(Tensor logits, ReplayDatasetClass @class)
