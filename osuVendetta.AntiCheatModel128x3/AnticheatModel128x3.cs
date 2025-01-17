@@ -39,11 +39,6 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
         _fc = Linear(Config.HiddenSize * 2, Config.OutputSize);
 
         RegisterComponents();
-
-
-#if WIN_CUDA_RELEASE || WIN_CUDA_DEBUG || LINUX_CUDA_DEBUG || LINUX_CUDA_RELEASE
-        SetDevice(DeviceType.CUDA);
-#endif
     }
 
     public AntiCheatModelResult RunInference(ReplayTokens tokens)

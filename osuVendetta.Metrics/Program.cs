@@ -1,9 +1,13 @@
 ﻿using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Mathematics;
 using BenchmarkDotNet.Reports;
 using BenchmarkDotNet.Running;
+using osuVendetta.CLI;
+using osuVendetta.Core.Configuration;
 using Perfolizer.Horology;
+using Spectre.Console;
 
 namespace osuVendetta.Metrics;
 
@@ -24,9 +28,35 @@ internal class Program
 #endif
                 .AsDefault());
 
+        Table table = new Table()
+            .Title("Benchmark results")
+            .AddColumns("Name", "Mean", "Error", "Std Dev");
+
         Summary[] summaries = BenchmarkRunner.Run(typeof(Program).Assembly, config);
 
-        Console.WriteLine("Press 'Enter' to exit");
+        foreach (Summary summary in summaries)
+        {
+            foreach (BenchmarkReport report in summary.Reports)
+            {
+                Statistics stats = report.ResultStatistics!;
+
+                table.AddRow(report.BenchmarkCase.Descriptor.WorkloadMethod.Name,
+                             $"{(stats.Mean / 1_000_000):n3} ms",
+                             $"{(stats.StandardError / 1_000_000):n3} ms",
+                             $"{(stats.StandardDeviation  / 1_000_000):n3} ms");
+            }
+        }
+
+        AnsiConsole.Foreground = ConsoleColor.Cyan;
+
+        AnsiConsole.WriteLine();
+        AnsiConsole.WriteLine("---------------------------");
+        AnsiConsole.WriteLine();
+
+        AnsiConsole.Write(table);
+        AnsiConsole.WriteLine();
+
+        AnsiConsole.WriteLine("Press 'Enter' to exit");
         Console.ReadLine();
     }
 }

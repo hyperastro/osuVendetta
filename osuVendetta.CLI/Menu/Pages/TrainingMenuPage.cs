@@ -1,5 +1,6 @@
 ﻿using osuVendetta.AntiCheatModel128x3;
 using osuVendetta.Core.AntiCheat;
+using osuVendetta.Core.Configuration;
 using osuVendetta.Core.IO.Dataset;
 using osuVendetta.Core.Replays;
 using osuVendetta.Core.Utility;
@@ -77,11 +78,13 @@ public class TrainingMenuPage : MenuPage
 
             await Task.Run(() =>
             {
+                CLIConfig config = BaseConfig.Load<CLIConfig>();
+
                 trainer.RunTraining(new ReplayDatasetProvider(
                     _replayProcessor,
                     [
-                        new ReplayDatasetInfo(ReplayDatasetClass.Normal, new DirectoryInfo("C:\\Users\\Unk\\Downloads\\DatasetV1\\DatasetV1\\normal").EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList()),
-                        new ReplayDatasetInfo(ReplayDatasetClass.Relax, new DirectoryInfo("C:\\Users\\Unk\\Downloads\\DatasetV1\\DatasetV1\\relax").EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList())
+                        new ReplayDatasetInfo(ReplayDatasetClass.Normal, new DirectoryInfo(config.TrainingNormalDatasetDirectory).EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList()),
+                        new ReplayDatasetInfo(ReplayDatasetClass.Relax, new DirectoryInfo(config.TrainingRelaxDatasetDirectory).EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList())
                     ]),
                     progressReporter);
             });

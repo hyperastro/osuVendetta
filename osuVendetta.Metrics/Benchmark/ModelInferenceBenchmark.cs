@@ -1,6 +1,7 @@
 ﻿using BenchmarkDotNet.Attributes;
 using osuVendetta;
 using osuVendetta.CLI;
+using osuVendetta.Core.Anticheat.Data;
 using osuVendetta.Core.AntiCheat;
 using osuVendetta.Core.Configuration;
 using osuVendetta.Core.Replays;
@@ -13,48 +14,41 @@ using System.Threading.Tasks;
 
 namespace osuVendetta.Metrics.Benchmark;
 
-public class ReplayProcessorBenchmark
+public class ModelInferenceBenchmark
 {
 #nullable disable // See Setup()
     AntiCheatModel128x3.AntiCheatModel128x3 _antiCheatModel;
     ReplayProcessor _replayProcessor;
-    FileStream _replayStream;
+    ReplayTokens _replayTokens;
     CLIConfig _config;
 #nullable enable
 
     [GlobalSetup]
     public void Setup()
     {
-        _antiCheatModel = new AntiCheatModel128x3.AntiCheatModel128x3();
-        _replayProcessor = new ReplayProcessor(_antiCheatModel);
         _config = BaseConfig.Load<CLIConfig>();
-    }
+        _antiCheatModel = new AntiCheatModel128x3.AntiCheatModel128x3();
+        _antiCheatModel.SetDevice(TorchSharp.DeviceType.CUDA);
 
-    [IterationSetup]
-    public void IterationSetup()
-    {
-        string path = Path.Combine(_config.GlobalBenchmarkDir, "replay.osr");
+        using FileStream modelStream = File.OpenRead(_config.ModelPath);
+        _antiCheatModel.Load(modelStream);
 
-        _replayStream?.Dispose();
-        _replayStream = File.OpenRead(path);
+        _replayProcessor = new ReplayProcessor(_antiCheatModel);
+
+        string replayPath = Path.Combine(_config.GlobalBenchmarkDir, "replay.osr");
+        using FileStream replayStream = File.OpenRead(replayPath);
+        _replayTokens = _replayProcessor.CreateTokensParallel(replayStream);
     }
 
     [GlobalCleanup]
     public void Cleanup()
     {
-        _replayStream.Dispose();
         _antiCheatModel.Dispose();
     }
 
     [Benchmark]
-    public ReplayValidationResult ValidateReplay()
+    public AntiCheatModelResult RunInference()
     {
-        return _replayProcessor.IsValidReplay(_replayStream);
-    }
-
-    [Benchmark]
-    public ReplayTokens CreateTokensParallel()
-    {
-        return _replayProcessor.CreateTokensParallel(_replayStream);
+        return _antiCheatModel.RunInference(_replayTokens);
     }
 }

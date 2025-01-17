@@ -31,19 +31,8 @@ internal class AntiCheatService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        AnsiConsole.WriteLine("Loading anticheat model...");
-
-        //using FileStream modelStream = File.OpenRead("Data/128x3V2.safetensors");
-        //_antiCheatModel.Load(modelStream);
-
-        AnsiConsole.WriteLine("Anticheat model loaded");
-
         DeviceType device = DeviceType.CPU;
-        string modelVersion = _antiCheatModel.Config.Version?.ToString() ?? "Unkown Version";
-
-#if RELEASE_WIN_CPU
-
-#endif
+        string modelVersion = _antiCheatModel.Config.Version?.ToString() ?? "Unknown Version";
 
 #if RELEASE_WIN_CPU || DEBUG_WIN_CPU || RELEASE_LINUX_CPU || DEBUG_LINUX_CPU
         device = DeviceType.CPU;
