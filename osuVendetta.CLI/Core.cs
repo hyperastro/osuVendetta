@@ -25,6 +25,8 @@ internal class Program
 
     static async Task Main(string[] args)
     {
+        ConfigDir.OverwriteConfigDir();
+
         if (args.Length > 0)
             await RunCommandApp(args);
         else

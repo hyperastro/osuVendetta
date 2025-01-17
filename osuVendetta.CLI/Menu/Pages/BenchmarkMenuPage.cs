@@ -2,6 +2,7 @@
 using osuVendetta.Core.Anticheat.Benchmark;
 using osuVendetta.Core.Anticheat.Benchmark.Data;
 using osuVendetta.Core.Anticheat.Data;
+using osuVendetta.Core.Configuration;
 using osuVendetta.Core.Utility;
 using Spectre.Console;
 using System.Diagnostics;
@@ -92,23 +93,20 @@ public class BenchmarkMenuPage : MenuPage
 
     AntiCheatBenchmarkSettings CreateDefaultSettings()
     {
+        CLIConfig config = BaseConfig.Load<CLIConfig>();
+
         return new AntiCheatBenchmarkSettings
         {
             DirectorySettings = [
                 new AntiCheatBenchmarkDirectorySetting
                 {
-                    Directory = new DirectoryInfo("Data/Benchmark/Normal"),
+                    Directory = new DirectoryInfo(config.ModelBenchmarkNormalDatasetDirectory),
                     ResultProcessor = m => ProcessBenchmark(m, false)
                 },
                 new AntiCheatBenchmarkDirectorySetting
                 {
-                    Directory = new DirectoryInfo("Data/Benchmark/Relax"),
+                    Directory = new DirectoryInfo(config.ModelBenchmarkRelaxDatasetDirectory),
                     ResultProcessor = m => ProcessBenchmark(m, true)
-                },
-                new AntiCheatBenchmarkDirectorySetting
-                {
-                    Directory = new DirectoryInfo("C:/osu!/Replays"),
-                    ResultProcessor = m => ProcessBenchmark(m, false)
                 }
             ]
         };

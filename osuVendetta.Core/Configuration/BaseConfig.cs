@@ -30,7 +30,7 @@ public abstract class BaseConfig
     public static TConfig Load<TConfig>()
         where TConfig : BaseConfig
     {
-        string path = GetConfigPath(nameof(TConfig));
+        string path = GetConfigPath(typeof(TConfig).Name);
 
         if (!File.Exists(path))
         {
@@ -60,12 +60,12 @@ public abstract class BaseConfig
 
     static string GetConfigPath(string configIdentifier)
     {
-        string basePath = Path.Combine(Environment.CurrentDirectory, ConfigDirectory);
+        string basePath = Path.Combine(BasePath, ConfigDirectory);
 
         if (!Directory.Exists(basePath))
             Directory.CreateDirectory(basePath);
 
-        return Path.Combine(Environment.CurrentDirectory, ConfigDirectory, $"{configIdentifier}.json");
+        return Path.Combine(basePath, $"{configIdentifier}.json");
     }
 
 }
