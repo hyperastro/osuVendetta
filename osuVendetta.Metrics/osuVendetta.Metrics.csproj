@@ -1,0 +1,64 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Configurations>Debug-Linux-Cuda;Debug-Linux-Cpu;Debug-Win-Cpu;Debug-Win-Cuda;Release-Linux-Cpu;Release-Linux-Cuda;Release-Win-Cpu;Release-Win-Cuda</Configurations>
+    <Platforms>x64</Platforms>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Win-Cuda|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Win-Cuda|x64'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Win-Cpu|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Win-Cpu|x64'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Linux-Cuda|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Linux-Cuda|x64'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Linux-Cpu|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Linux-Cpu|x64'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Data\Benchmark\replay.osr" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Data\Benchmark\replay.osr">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\osuVendetta.AntiCheatModel128x3\osuVendetta.AntiCheatModel128x3.csproj" />
+    <ProjectReference Include="..\osuVendetta.CLI\osuVendetta.CLI.csproj" />
+    <ProjectReference Include="..\osuVendetta.Core\osuVendetta.Core.csproj" />
+  </ItemGroup>
+
+</Project>

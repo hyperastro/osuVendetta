@@ -99,9 +99,6 @@ public class AntiCheatTrainer
         PrepareSeed();
 
         autograd.set_detect_anomaly(true);
-        set_default_device(torch.device(DeviceType.CUDA));
-
-        _model.SetDevice(DeviceType.CUDA);
 
         if (!_model.training)
             _model.train();

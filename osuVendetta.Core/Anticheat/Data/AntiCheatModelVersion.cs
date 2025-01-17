@@ -19,4 +19,8 @@ public class AntiCheatModelVersion
     /// </summary>
     public required int Minor { get; set; }
 
+    public override string ToString()
+    {
+        return DisplayText;
+    }
 }

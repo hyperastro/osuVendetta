@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TorchSharp;
 using static TorchSharp.torch;
 
 namespace osuVendetta.CLI.Services;
@@ -30,12 +31,29 @@ internal class AntiCheatService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        //AnsiConsole.WriteLine("Loading anticheat model...");
+        AnsiConsole.WriteLine("Loading anticheat model...");
 
         //using FileStream modelStream = File.OpenRead("Data/128x3V2.safetensors");
         //_antiCheatModel.Load(modelStream);
 
-        //AnsiConsole.WriteLine("Anticheat model loaded");
+        AnsiConsole.WriteLine("Anticheat model loaded");
+
+        DeviceType device = DeviceType.CPU;
+        string modelVersion = _antiCheatModel.Config.Version?.ToString() ?? "Unkown Version";
+
+#if RELEASE_WIN_CPU
+
+#endif
+
+#if RELEASE_WIN_CPU || DEBUG_WIN_CPU || RELEASE_LINUX_CPU || DEBUG_LINUX_CPU
+        device = DeviceType.CPU;
+#elif RELEASE_WIN_CUDA || DEBUG_WIN_CUDA || RELEASE_LINUX_CUDA || DEBUG_LINUX_CUDA
+        device = DeviceType.CUDA;
+#endif
+
+        AnsiConsole.WriteLine($"Model device type: {device}");
+        Console.Title = $"osu!Vendetta | Device: {device}";
+        _antiCheatModel.SetDevice(device);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

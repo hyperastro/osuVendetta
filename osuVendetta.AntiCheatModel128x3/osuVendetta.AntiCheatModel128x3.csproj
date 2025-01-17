@@ -4,24 +4,41 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Configurations>Debug;Release;win-cuda-debug;linux-cuda-debug;win-cpu-debug;linux-cpu-debug;linux-cpu-release;linux-cuda-release;win-cpu-release;win-cuda-release</Configurations>
+    <Configurations>Debug-Linux-Cpu;Debug-Linux-Cuda;Debug-Win-Cpu;Debug-Win-Cuda;Release-Linux-Cpu;Release-Linux-Cuda;Release-Win-Cpu;Release-Win-Cuda</Configurations>
     <PlatformTarget>x64</PlatformTarget>
     <OutputType>Library</OutputType>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='win-cuda-release|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Linux-Cpu|x64'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Linux-Cuda|x64'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Win-Cpu|x64'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Win-Cuda|x64'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Linux-Cpu|x64'">
     <Optimize>True</Optimize>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='win-cpu-release|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Linux-Cuda|x64'">
     <Optimize>True</Optimize>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='linux-cuda-release|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Win-Cpu|x64'">
     <Optimize>True</Optimize>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='linux-cpu-release|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Win-Cuda|x64'">
     <Optimize>True</Optimize>
   </PropertyGroup>
 

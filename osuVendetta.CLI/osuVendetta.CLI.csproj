@@ -5,8 +5,41 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Configurations>Debug;Release;win-cuda-debug;linux-cuda-debug;win-cpu-debug;linux-cpu-debug;linux-cpu-release;linux-cuda-release;win-cpu-release;win-cuda-release</Configurations>
+    <Configurations>Debug-Linux-Cpu;Debug-Linux-Cuda;Debug-Win-Cpu;Debug-Win-Cuda;Release-Linux-Cpu;Release-Linux-Cuda;Release-Win-Cpu;Release-Win-Cuda</Configurations>
     <PlatformTarget>x64</PlatformTarget>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Win-Cuda|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Win-Cuda|x64'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Linux-Cuda|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Linux-Cuda|x64'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Linux-Cpu|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Linux-Cpu|x64'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Win-Cpu|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Win-Cpu|x64'">
+    <Optimize>True</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,8 +48,6 @@
     <PackageReference Include="Spectre.Console" Version="0.49.2-preview.0.69" />
     <PackageReference Include="Spectre.Console.Cli" Version="0.49.2-preview.0.69" />
   </ItemGroup>
-
-  
 
   <ItemGroup>
     <ProjectReference Include="..\osuVendetta.AntiCheatModel128x3\osuVendetta.AntiCheatModel128x3.csproj" />

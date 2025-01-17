@@ -105,8 +105,9 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
 
     public void SetDevice(DeviceType device)
     {
+        set_default_device(torch.device(device));
         Device = device;
-        _to(Device, 0, false);
+        Module m = _to(Device, 0, false);
     }
 
     public override LstmData forward(LstmData input)

@@ -38,6 +38,8 @@ public class TrainingMenuPage : MenuPage
         DateTime start = DateTime.Now;
         double replaysPerSecond = 0;
 
+        string originalConsoleTitle = Console.Title ?? string.Empty;
+
         Task rpsTask = new Task(async () =>
         {
             for (; ; )
@@ -47,7 +49,7 @@ public class TrainingMenuPage : MenuPage
                     replaysPerSecond = processedReplays / (DateTime.Now - start).TotalSeconds;
                 }
 
-                Console.Title = $"Replays Per Second: {replaysPerSecond}";
+                Console.Title = $"{originalConsoleTitle} | Replays Per Second: {(int)replaysPerSecond}";
                 await Task.Delay(500);
             }
         });
@@ -78,8 +80,8 @@ public class TrainingMenuPage : MenuPage
                 trainer.RunTraining(new ReplayDatasetProvider(
                     _replayProcessor,
                     [
-                        new ReplayDatasetInfo(ReplayDatasetClass.Normal, new DirectoryInfo("C:\\Users\\Gui\\Downloads\\datasetSmall\\datasetSmall\\tempnorm").EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList()),
-                    new ReplayDatasetInfo(ReplayDatasetClass.Relax, new DirectoryInfo("C:\\Users\\Gui\\Downloads\\datasetSmall\\datasetSmall\\temprelax").EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList())
+                        new ReplayDatasetInfo(ReplayDatasetClass.Normal, new DirectoryInfo("C:\\Users\\Unk\\Downloads\\DatasetV1\\DatasetV1\\normal").EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList()),
+                        new ReplayDatasetInfo(ReplayDatasetClass.Relax, new DirectoryInfo("C:\\Users\\Unk\\Downloads\\DatasetV1\\DatasetV1\\relax").EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList())
                     ]),
                     progressReporter);
             });
@@ -88,6 +90,7 @@ public class TrainingMenuPage : MenuPage
         });
 
         AnsiConsole.WriteLine("Press any key to return");
+        Console.Title = originalConsoleTitle;
         Console.ReadLine();
         Console.ReadLine();
 
