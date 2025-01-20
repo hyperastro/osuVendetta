@@ -44,6 +44,7 @@ public class AntiCheatTrainer
         float MaxGradNorm,
         float avgAccuracy,
         float avgLoss,
+        float lastF1,
         EpochTrainingParameters Parameters,
         IReplayDatasetProvider DatasetProvider,
         IProgressReporter ProgressReporter);
@@ -130,18 +131,22 @@ public class AntiCheatTrainer
         int bestEpoch = 0;
         float bestEpochAccuracy = 0;
 
+        float lastF1 = 0;
+
         int epochsWithoutImprovement = 0;
         while (epochsWithoutImprovement < _epochTrainingWastedStop &&
                currentEpoch < _epochTrainingLimit)
         {
             EpochParameters epochParams = new EpochParameters(
-                currentEpoch, maxGradNorm, avgAccuracy, 
-                avgLoss, parameters, tokenProvider, progress);
+                currentEpoch, maxGradNorm, avgAccuracy,
+                avgLoss, lastF1, parameters, tokenProvider, progress);
 
-            (float runningLoss, float runningAccuracy, float F1score) = TrainEpoch(epochParams);
+            (float runningLoss, float runningAccuracy, float f1Score) = TrainEpoch(epochParams);
 
             totalAccuracy += runningAccuracy;
             totalLoss += runningLoss;
+
+            lastF1 = f1Score;
 
             if (runningAccuracy < bestEpochAccuracy)
             {
@@ -169,6 +174,7 @@ public class AntiCheatTrainer
     {
         float totalLoss = 0;
         float avgLoss = 0;
+        float epochRunningF1Score = 0;
 
         float totalAccuracy = 0;
         float avgAccuracy = 0;
@@ -184,7 +190,7 @@ public class AntiCheatTrainer
         {
             parameters.ProgressReporter.SetProgressTitle(
 $"Epoch {parameters.Epoch} Replay {replayCounter} / {parameters.DatasetProvider.TotalReplays} " +
-$"(Avg Accuracy: {avgAccuracy:n8}, Avg Loss: {avgLoss:n8}) ");
+$"(Avg Accuracy/Loss: {avgAccuracy:n4}/{avgLoss:n4}, Running/Last Epoch F1: {epochRunningF1Score:n8}/{parameters.lastF1:n4}) ");
 
             parameters.ProgressReporter.Increment();
 
@@ -202,6 +208,7 @@ $"(Avg Accuracy: {avgAccuracy:n8}, Avg Loss: {avgLoss:n8}) ");
 
                 avgLoss = totalLoss / replayCounter;
                 avgAccuracy = totalAccuracy / replayCounter;
+                epochRunningF1Score = F1Score.CalculateF1Score(totalTruePositives, totalFalsePositives, totalFalseNegatives);
             }
         }
 
@@ -210,9 +217,7 @@ $"(Avg Accuracy: {avgAccuracy:n8}, Avg Loss: {avgLoss:n8}) ");
         
         float f1Score = F1Score.CalculateF1Score(totalTruePositives, totalFalsePositives, totalFalseNegatives);
 
-        Console.WriteLine($"Epoch {parameters.Epoch} F1 Score: {f1Score:n4}");
-
-        return (avgLoss, avgAccuracy,f1Score);
+        return (avgLoss, avgAccuracy, f1Score);
     }
 
     (float runningLoss, float runningAccuracy, int truePositives, int falsePositives, int falseNegatives) Step(EpochParameters parameters, ReplayDatasetEntry entry)
