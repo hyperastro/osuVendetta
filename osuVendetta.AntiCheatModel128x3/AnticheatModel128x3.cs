@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using TorchSharp.Utils;
 using System.Text;
 using osuVendetta.Core.IO.Safetensors;
+using System.Diagnostics;
 
 namespace osuVendetta.AntiCheatModel128x3;
 
@@ -21,7 +22,7 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
     readonly Dropout _dropOut;
     readonly Linear _fc;
 
-
+    static readonly int _tempMaxBatchSize = 32;
 
     public AntiCheatModel128x3() : base("128x3 Anticheat Model")
     {
@@ -68,13 +69,46 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
                 eval();
         }
 
-        int batchCount = (int)Math.Ceiling((float)tokens.Tokens.Length / Config.TotalFeatureSizePerChunk);
-        using Tensor input = tensor(tokens.Tokens,
-                                    dimensions: [batchCount, Config.StepsPerChunk, Config.FeaturesPerStep]);
+        int totalBatchCount = (int)Math.Ceiling((float)tokens.Tokens.Length / Config.TotalFeatureSizePerChunk);
+        int batchCountSplit = (int)Math.Ceiling((float)totalBatchCount / _tempMaxBatchSize);
+        Span<float> tokensLeft = tokens.Tokens;
 
-        using LstmData lstmInput = new LstmData(input, hiddenStates);
+        (Tensor, Tensor)? lastHiddenState = hiddenStates;
+        List<float> segments = new List<float>();
 
-        return forward(lstmInput);
+        for (int i = 0; i < batchCountSplit; i++)
+        {
+            using IDisposable disposeScope = NewDisposeScope();
+            
+            int batchesToTake = (int)Math.Min(Math.Ceiling((float)tokensLeft.Length / Config.TotalFeatureSizePerChunk), _tempMaxBatchSize);
+            int featuresToTake = batchesToTake * Config.TotalFeatureSizePerChunk;
+
+            float[] tokensToProcess = tokensLeft[..featuresToTake].ToArray();
+            tokensLeft = tokensLeft[featuresToTake..];
+
+            Tensor input = tensor(tokensToProcess,
+                                        dimensions: [batchesToTake, Config.StepsPerChunk, Config.FeaturesPerStep]);
+
+            LstmData lstmInput = new LstmData(input, hiddenStates);
+            LstmData lstmOutput = forward(lstmInput);
+
+            segments.AddRange(lstmOutput.Data.ToArray<float>());
+
+            // dispose old hidden states before setting new ones to save vram
+            lastHiddenState?.Item1.Dispose();
+            lastHiddenState?.Item2.Dispose();
+
+            if (lstmOutput.HiddenState is not null)
+            {
+                lastHiddenState = (
+                    lstmOutput.HiddenState.Value.H0.MoveToOuterDisposeScope(),
+                    lstmOutput.HiddenState.Value.C0.MoveToOuterDisposeScope());
+            }
+        }
+
+        Tensor output = tensor(segments);
+
+        return new LstmData(output, lastHiddenState);
     }
 
     public void Load(Stream modelSafetensors)
