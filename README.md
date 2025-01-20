@@ -16,19 +16,45 @@ By participating, you'll be playing a crucial role in making osu! a fairer and m
 Code will be uploaded as soon as its confirmed to be stable if you want to contribute now DM me on discord
 
 
+---
+
+Note
+- ``osuVendetta.\*`` refers to the folder/project structure.
+    - Where ``*`` represents any folder starting with ``osuVendetta.``
 
 
-**Using the Osu report Web Scraper script**
+## 1. Requirements
 
-the script was written in python 3.10
+**osu! report web scraper script**
 
-you will need to install the following dependencies 
+- Python 3.10
+- Reddit API key
+- Depdencies:
+    - ``pip install praw``
 
-    pip install praw
+**osuVendetta.\***
 
-you will also need to request a API key from reddit
+- .Net 9
+- Preferably ``Visual Studio`` ``Community Edition`` (Enable ``Preview`` mode)
 
-Then input your api key in the script and run it. it should return the scoreID of the play followed by the type of cheat
+## 2. Setup
 
-you can change the number of messages scraped by changing the limmit value, it is set to 100 by default
+**osu! report web scraper script**
 
+- TBD
+
+**osuVendetta.\***
+
+- TBD
+
+## 3. Running
+
+**osu! report web scraper script**
+
+- Input your api key in the script and run it.
+    - It should return the scoreID of the play followed by the type of cheat
+    - you can change the number of messages scraped by changing the limmit value, it is set to 100 by default
+
+**osuVendetta.\***
+
+- Start ``osuVendetta.Cli.exe``
