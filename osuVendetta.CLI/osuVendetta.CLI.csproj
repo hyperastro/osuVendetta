@@ -8,6 +8,7 @@
     <Configurations>Debug-Linux-Cpu;Debug-Linux-Cuda;Debug-Win-Cpu;Debug-Win-Cuda;Release-Linux-Cpu;Release-Linux-Cuda;Release-Win-Cpu;Release-Win-Cuda</Configurations>
     <PlatformTarget>x64</PlatformTarget>
     <Platforms>AnyCPU;x64</Platforms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Win-Cuda|AnyCPU'">

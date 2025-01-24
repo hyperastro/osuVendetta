@@ -22,7 +22,7 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
     readonly Dropout _dropOut;
     readonly Linear _fc;
 
-    static readonly int _tempMaxBatchSize = 32;
+    static readonly int _tempMaxBatchSize = 64;
 
     public AntiCheatModel128x3() : base("128x3 Anticheat Model")
     {
@@ -74,7 +74,7 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
         Span<float> tokensLeft = tokens.Tokens;
 
         (Tensor, Tensor)? lastHiddenState = hiddenStates;
-        List<float> segments = new List<float>();
+        Tensor? currentSegmentTensor = null;
 
         for (int i = 0; i < batchCountSplit; i++)
         {
@@ -82,9 +82,11 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
             
             int batchesToTake = (int)Math.Min(Math.Ceiling((float)tokensLeft.Length / Config.TotalFeatureSizePerChunk), _tempMaxBatchSize);
             int featuresToTake = batchesToTake * Config.TotalFeatureSizePerChunk;
+            int actualFeaturesToTake = Math.Min(featuresToTake, tokensLeft.Length);
 
-            float[] tokensToProcess = tokensLeft[..featuresToTake].ToArray();
-            tokensLeft = tokensLeft[featuresToTake..];
+            float[] tokensToProcess = new float[featuresToTake];
+            tokensLeft[..actualFeaturesToTake].CopyTo(tokensToProcess);
+            tokensLeft = tokensLeft[actualFeaturesToTake..];
 
             Tensor input = tensor(tokensToProcess,
                                         dimensions: [batchesToTake, Config.StepsPerChunk, Config.FeaturesPerStep]);
@@ -92,7 +94,15 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
             LstmData lstmInput = new LstmData(input, hiddenStates);
             LstmData lstmOutput = forward(lstmInput);
 
-            segments.AddRange(lstmOutput.Data.ToArray<float>());
+            if (currentSegmentTensor is null)
+                currentSegmentTensor = lstmOutput.Data.MoveToOuterDisposeScope();
+            else
+            {
+
+                Tensor last = currentSegmentTensor;
+                currentSegmentTensor = cat([currentSegmentTensor, lstmOutput.Data]).MoveToOuterDisposeScope();
+                last.Dispose();
+            }
 
             // dispose old hidden states before setting new ones to save vram
             lastHiddenState?.Item1.Dispose();
@@ -106,7 +116,11 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
             }
         }
 
-        Tensor output = tensor(segments);
+        if (currentSegmentTensor is null)
+            throw new NullReferenceException("Current segment is null");
+
+        Tensor output = currentSegmentTensor[TensorIndex.Colon, -1];
+        currentSegmentTensor.Dispose();
 
         return new LstmData(output, lastHiddenState);
     }
@@ -141,24 +155,17 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
 
     public override LstmData forward(LstmData input)
     {
-        //if (input.device_type != Device)
-        //input = input.to(Device);
-
-        //using LstmData lstm = _lstm.forward(input);
-        //using Tensor mean = lstm.Data.mean([1]);
-        //using Tensor squeezed = mean.squeeze(1);
-        //using Tensor dropOut = _dropOut.forward(squeezed);
-        //using Tensor fc = _fc.forward(dropOut);
-
         using LstmData lstm = _lstm.forward(input.Data, input.HiddenState);
         using Tensor lstmData = lstm.Data[TensorIndex.Colon, -1, TensorIndex.Colon];
         using Tensor dropOut = _dropOut.forward(lstmData);
 
-        //using Tensor fc = _fc.forward(dropOut);
-        //Tensor output = sigmoid(fc);
-
         Tensor output = _fc.forward(dropOut);
         (Tensor H0, Tensor C0)? hiddenState = lstm.DetachHiddenState();
+
+        //Console.WriteLine($"Forward: lstm.Data requires grad: {lstm.Data.requires_grad} (is null: {lstmData.grad is null})");
+        //Console.WriteLine($"Forward: lstmData requires grad: {lstmData.requires_grad} (is null: {lstmData.grad is null})");
+        //Console.WriteLine($"Forward: dropOut requires grad: {dropOut.requires_grad} (is null: {lstmData.grad is null})");
+        //Console.WriteLine($"Forward: fc (output) requires grad: {output.requires_grad} (is null: {output.grad is null})");
 
         return new LstmData(output, hiddenState);
     }

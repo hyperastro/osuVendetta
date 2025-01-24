@@ -113,7 +113,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
         {
             float decay = group.WeightDecay;
             k = group.K;
-            float eps = group.EPS;
+            float eps = group.Eps;
             float groupLr = (float)group.LearningRate;
             _d0 = group.D0;
             bool safeguardWarmup = group.SafeguardWarmup;
@@ -144,7 +144,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                     state.S = zeros_like(p.flatten().slice(0, 0, -1, sliceP)).detach().MoveToOuterDisposeScope();
 
                     state.P0?.Dispose();
-                    if (p.ToArray<bool>().Any())
+                    if (p.ToArray<float>().Any())
                         state.P0 = p.flatten().slice(0, 0, -1, sliceP).detach().clone().MoveToOuterDisposeScope();
                     else
                         state.P0 = tensor(0, device: p.device, dtype: p.dtype).MoveToOuterDisposeScope();
@@ -207,7 +207,8 @@ public class Prodigy : OptimizerHelper, optim.IBetas
         dMax = max(dMax, dHat).item<float>();
         d = min(dMax, d * growthRate).item<float>();
 
-        foreach (ParamGroup group in _parameter_groups)
+        return _step<ParamGroup>(group =>
+        //foreach (ParamGroup group in _parameter_groups)
         {
             group.DNumerator = _globalDNumerator;
             group.DDenom = _globalDDenom;
@@ -217,7 +218,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
 
             float decay = group.WeightDecay;
             k = group.K;
-            float eps = group.EPS;
+            float eps = group.Eps;
 
             foreach (Parameter p in group.Parameters)
             {
@@ -248,9 +249,9 @@ public class Prodigy : OptimizerHelper, optim.IBetas
             }
 
             group.K = k + 1;
-        }
+        });
 
-        return loss;
+        //return loss;
     }
 
     //public Tensor stepExample(Func<Tensor>? closure = null)
@@ -712,15 +713,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
     {
         public bool IsDisposed { get; private set; }
 
-        public (double, double) Betas
-        {
-            get => (Options.Beta1, Options.Beta2);
-            set
-            {
-                Options.Beta1 = (float)value.Item1;
-                Options.Beta2 = (float)value.Item2;
-            }
-        }
+        public (double, double) Betas { get; set; }
 
         public (float, float) BetasFloat
         {
@@ -731,22 +724,78 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                 Options.Beta2 = value.Item2;
             }
         }
-        public float? Beta3 { get; set; }
-        public float DNumerator { get; set; }
+        public float? Beta3
+        {
+            get => Options.Beta3;
+            set => Options.Beta3 = value;
+        }
+        public float DNumerator
+        {
+            get => Options.DNumerator;
+            set => Options.DNumerator = value;
+        }
         public float DDenom { get; set; }
-        public float D { get; set; }
-        public float D0 { get; set; }
-        public float DCoef { get; set; }
-        public float DMax { get; set; }
+        public float D
+        {
+            get => Options.D;
+            set => Options.D = value;
+        }
+        public float D0
+        {
+            get => Options.D0;
+            set => Options.D0 = value;
+        }
+        public float DCoef
+        {
+            get => Options.DCoef;
+            set => Options.DCoef = value;
+        }
+        public float DMax
+        {
+            get => Options.DMax;
+            set => Options.DMax = value;
+        }
         public float DHat { get; set; }
-        public bool Decouple { get; set; }
-        public bool SafeguardWarmup { get; set; }
-        public float GrowthRate { get; set; }
-        public float WeightDecay { get; set; }
-        public float K { get; set; }
-        public float EPS { get; set; } 
-        public bool UseBiasCorrection { get; set; }
-        public long SliceP { get; set; }
+        public bool Decouple
+        {
+            get => Options.Decouple;
+            set => Options.Decouple = value;
+        }
+        public bool SafeguardWarmup
+        {
+            get => Options.SafeguardWarmup;
+            set => Options.SafeguardWarmup = value;
+        }
+        public float GrowthRate
+        {
+            get => Options.GrowthRate;
+            set => Options.GrowthRate = value;
+        }
+        public float WeightDecay
+        {
+            get => Options.WeightDecay;
+            set => Options.WeightDecay = value;
+        }
+        public float K
+        {
+            get => Options.K;
+            set => Options.K = value;
+        }
+        public float Eps
+        {
+            get => Options.Eps;
+            set => Options.Eps = value;
+        }
+        public bool UseBiasCorrection
+        {
+            get => Options.UseBiasCorrection;
+            set => Options.UseBiasCorrection = value;
+        }
+        public long SliceP
+        {
+            get => Options.SliceP;
+            set => Options.SliceP = value;
+        }
 
         //public ParamGroup(IEnumerable<Parameter> parameters, Options options) : base(parameters, options) 
         //{ 

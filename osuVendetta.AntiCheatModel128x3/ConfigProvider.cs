@@ -22,7 +22,7 @@ internal static class ConfigProvider
             Dropout = 0.3,
 
             StepOverlay = 0,
-            StepsPerChunk = 1000,
+            StepsPerChunk = 500,
             FeaturesPerStep = 6,
 
             ScalerMean = new ScalerValues

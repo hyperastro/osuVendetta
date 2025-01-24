@@ -51,7 +51,7 @@ public class AntiCheatTrainer
 
     readonly static int _epochTrainingLimit = 9999;
     readonly static int _epochTrainingWastedStop = 20;
-    readonly static int _epochTrainingMin = 100;
+    readonly static int _epochTrainingMin = 5;
 
     readonly AntiCheatModel128x3 _model;
 
@@ -78,8 +78,8 @@ public class AntiCheatTrainer
 
     OptimizerHelper CreateOptimizer()
     {
-        //return new AdamW(_model.parameters(), lr: 0.002, weight_decay: 1e-3);
-        return new Prodigy(_model.parameters(), weightDecay: .1f, decouple: true);
+        return new AdamW(_model.parameters(), lr: 0.002, weight_decay: 1e-3);
+        //return new Prodigy(_model.parameters(), weightDecay: .1f, decouple: true);
     }
 
     WeightedLoss<Tensor, Tensor, Tensor> CreateLossCriterion()
@@ -90,7 +90,7 @@ public class AntiCheatTrainer
     lr_scheduler.LRScheduler? CreateScheduler(OptimizerHelper optimizer)
     {
         //return lr_scheduler.CosineAnnealingLR(optimizer, _epochTrainingLimit);
-        //return lr_scheduler.ReduceLROnPlateau(optimizer, mode: "min", factor: 0.5, patience: 5, verbose: true, min_lr: [1e-6]);
+        return lr_scheduler.ReduceLROnPlateau(optimizer, mode: "min", factor: 0.5, patience: 5, verbose: true, min_lr: [1e-6]);
         return null;
     }
 
@@ -129,7 +129,7 @@ public class AntiCheatTrainer
         
         int currentEpoch = 0;
         int bestEpoch = 0;
-        float bestEpochAccuracy = 0;
+        float bestEpochF1 = 0;
 
         float lastF1 = 0;
 
@@ -146,23 +146,30 @@ public class AntiCheatTrainer
             totalAccuracy += runningAccuracy;
             totalLoss += runningLoss;
 
-            lastF1 = f1Score;
+            // use first 2 epochs for warmup
+            if (currentEpoch > 2)
+            {
+                if (f1Score < bestEpochF1)
+                {
+                    // train for atleast X epochs before starting to count for bad epochs
+                    if (currentEpoch >= _epochTrainingMin)
+                        epochsWithoutImprovement++;
 
-            if (runningAccuracy < bestEpochAccuracy)
-            {
-                // train for atleast X epochs before starting to count for bad epochs
-                if (currentEpoch >= _epochTrainingMin)
-                    epochsWithoutImprovement++;
-            }
-            else
-            {
-                epochsWithoutImprovement = 0;
-                bestState = _model.state_dict();
-                bestEpoch = currentEpoch;
-                bestEpochAccuracy = runningAccuracy;
+                    // return to last state that had any improvement
+                    //_model.load_state_dict(bestState);
+                }
+                else
+                {
+                    epochsWithoutImprovement = 0;
+                    bestState = _model.state_dict();
+                    bestEpoch = currentEpoch;
+                    bestEpochF1 = f1Score;
+                }
             }
 
             currentEpoch++;
+
+            lastF1 = f1Score;
             avgAccuracy = totalAccuracy / currentEpoch;
             avgLoss = totalLoss / currentEpoch;
         }
@@ -189,8 +196,8 @@ public class AntiCheatTrainer
         foreach (ReplayDatasetEntry entry in parameters.DatasetProvider)
         {
             parameters.ProgressReporter.SetProgressTitle(
-$"Epoch {parameters.Epoch} Replay {replayCounter} / {parameters.DatasetProvider.TotalReplays} " +
-$"(Avg Accuracy/Loss: {avgAccuracy:n4}/{avgLoss:n4}, Running/Last Epoch F1: {epochRunningF1Score:n8}/{parameters.lastF1:n4}) ");
+$"Epoch {parameters.Epoch}: {replayCounter} / {parameters.DatasetProvider.TotalReplays} " +
+$"(Current Acc/Loss/F1: {avgAccuracy:n4}/{avgLoss:n4}/{epochRunningF1Score:n4}, Last Epoch F1: {parameters.lastF1}) ");
 
             parameters.ProgressReporter.Increment();
 
@@ -231,20 +238,25 @@ $"(Avg Accuracy/Loss: {avgAccuracy:n4}/{avgLoss:n4}, Running/Last Epoch F1: {epo
         Tensor labels = tensor(labelsArray);
 
         LstmData data = _model.RunInference(entry.ReplayTokens, true);
-        float[] segments = data.Data.ToArray<float>();
-        Tensor segmentOutputs = segments;
 
-        Tensor loss = parameters.Parameters.LossCriterion.forward(segmentOutputs.requires_grad_(), labels.requires_grad_());
+        Tensor loss = parameters.Parameters.LossCriterion.forward(data.Data, labels);
 
         loss.backward();
+
+        //foreach (Parameter parameter in _model.parameters())
+        //    Console.WriteLine($"Parameter '{parameter.name}' requires grad: {parameter.requires_grad} (is null: {parameter.grad is null}");
+
         nn.utils.clip_grad_norm_(_model.parameters(), parameters.MaxGradNorm);
         _ = parameters.Parameters.Optimizer.step();
+
+        //foreach (Parameter parameter in _model.parameters())
+        //    Console.WriteLine($"Parameter '{parameter.name}' requires grad: {parameter.requires_grad} (is null: {parameter.grad is null}");
 
         float runningLoss = loss.item<float>();
         float runningAccuracy = LogitsToAccuracy(data.Data, entry.Class);
 
         // Calculate F1 score directly
-        float[] probabilities = sigmoid(segmentOutputs).ToArray<float>(); //Convert Logits into Probablilties
+        float[] probabilities = sigmoid(data.Data.ToArray<float>()).ToArray<float>(); //Convert Logits into Probablilties
         int truePositives = 0, falsePositives = 0, falseNegatives = 0;
         for (int i = 0; i < probabilities.Length; i++)
         {

@@ -13,7 +13,7 @@ public class LstmData : IDisposable
     /// <summary>
     /// Hidden state of the LSTM
     /// </summary>
-    public (Tensor H0, Tensor C0)? HiddenState { get; init; }
+    public (Tensor H0, Tensor C0)? HiddenState { get; private set; }
 
     public LstmData(Tensor data, (Tensor H0, Tensor C0)? hiddenState)
     {
@@ -31,7 +31,10 @@ public class LstmData : IDisposable
         if (HiddenState is null)
             return null;
 
-        return (HiddenState.Value.H0.detach(), HiddenState.Value.C0.detach());
+        (Tensor, Tensor) result = (HiddenState.Value.H0.detach(), HiddenState.Value.C0.detach());
+        HiddenState = null;
+
+        return result;
     }
 
     public void Dispose()
