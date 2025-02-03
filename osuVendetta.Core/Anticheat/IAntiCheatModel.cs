@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 using osuVendetta.Core.Replays.Data;
 using TorchSharp;
 using osuVendetta.Core.Anticheat.Data;
+using static TorchSharp.torch;
+using TorchSharp.Modules;
+using osuVendetta.Core.Training.Utility;
+using System.Security.Cryptography;
 
 namespace osuVendetta.Core.AntiCheat;
 
@@ -19,6 +23,7 @@ public interface IAntiCheatModel
     /// Device the model is currently using
     /// </summary>
     DeviceType Device { get; }
+    int MaxBatchSize { get; }
 
     /// <summary>
     /// Sets <see cref="Device"/> and moves the model to it
@@ -33,8 +38,24 @@ public interface IAntiCheatModel
     /// <returns></returns>
     AntiCheatModelResult RunInference(ReplayTokens tokens);
     /// <summary>
-    /// Loads the model from safetensors
+    /// <inheritdoc cref="RunInference(ReplayTokens)"/>
+    /// </summary>
+    /// <param name="tokens"></param>
+    /// <param name="isTraining">Should run in training mode</param>
+    /// <param name="hiddenStates">Optional hidden states for lstm</param>
+    /// <returns></returns>
+    LstmData RunInference(ReplayTokens tokens, bool isTraining, (Tensor H0, Tensor C0)? hiddenStates = null);
+    /// <summary>
+    /// Loads the model
     /// </summary>
     /// <param name="modelSafetensors"></param>
-    void Load(Stream modelSafetensors);
+    void Load(Stream model);
+
+    /// <summary>
+    /// Saves the model
+    /// </summary>
+    void Save(Stream model);
+    void Reset();
+        
+    IEnumerable<Parameter> GetParameters();
 }

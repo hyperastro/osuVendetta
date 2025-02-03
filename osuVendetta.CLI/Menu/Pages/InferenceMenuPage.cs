@@ -119,10 +119,10 @@ public class InferenceMenuPage : MenuPage
 
         while (files.Count == 0)
         {
-            string path = PromptPath();
-
-            if (string.IsNullOrEmpty(path))
-                continue;
+            string path = new TextPrompt<string>("File path:")
+                .PromptFor(
+                    s => !string.IsNullOrEmpty(s),
+                    "Select the folder or file you want to run inference on");
 
             path = path.Trim('"');
 
@@ -143,11 +143,4 @@ public class InferenceMenuPage : MenuPage
         return files;
     }
 
-    string PromptPath()
-    {
-        AnsiConsole.Clear();
-        AnsiConsole.WriteLine("Select the folder or file you want to run inference on");
-
-        return AnsiConsole.Prompt(new TextPrompt<string>("File path:"));
-    }
 }

@@ -5,11 +5,7 @@ using static TorchSharp.torch;
 using TorchSharp.Modules;
 using osuVendetta.Core.Anticheat.Data;
 using osuVendetta.Core.AntiCheat;
-using System.Runtime.InteropServices;
-using TorchSharp.Utils;
-using System.Text;
-using osuVendetta.Core.IO.Safetensors;
-using System.Diagnostics;
+using osuVendetta.Core.Training.Utility;
 
 namespace osuVendetta.AntiCheatModel128x3;
 
@@ -17,12 +13,11 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
 {
     public DeviceType Device { get; private set; }
     public AntiCheatModelConfig Config { get; }
+    public int MaxBatchSize { get; } = 128;
 
     readonly LSTM _lstm;
     readonly Dropout _dropOut;
     readonly Linear _fc;
-
-    static readonly int _tempMaxBatchSize = 64;
 
     public AntiCheatModel128x3() : base("128x3 Anticheat Model")
     {
@@ -55,7 +50,6 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
         };
     }
 
-
     public LstmData RunInference(ReplayTokens tokens, bool isTraining, (Tensor H0, Tensor C0)? hiddenStates = null)
     {
         if (isTraining)
@@ -70,7 +64,7 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
         }
 
         int totalBatchCount = (int)Math.Ceiling((float)tokens.Tokens.Length / Config.TotalFeatureSizePerChunk);
-        int batchCountSplit = (int)Math.Ceiling((float)totalBatchCount / _tempMaxBatchSize);
+        int batchCountSplit = (int)Math.Ceiling((float)totalBatchCount / MaxBatchSize);
         Span<float> tokensLeft = tokens.Tokens;
 
         (Tensor, Tensor)? lastHiddenState = hiddenStates;
@@ -79,8 +73,8 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
         for (int i = 0; i < batchCountSplit; i++)
         {
             using IDisposable disposeScope = NewDisposeScope();
-            
-            int batchesToTake = (int)Math.Min(Math.Ceiling((float)tokensLeft.Length / Config.TotalFeatureSizePerChunk), _tempMaxBatchSize);
+
+            int batchesToTake = (int)Math.Min(Math.Ceiling((float)tokensLeft.Length / Config.TotalFeatureSizePerChunk), MaxBatchSize);
             int featuresToTake = batchesToTake * Config.TotalFeatureSizePerChunk;
             int actualFeaturesToTake = Math.Min(featuresToTake, tokensLeft.Length);
 
@@ -100,7 +94,7 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
             {
 
                 Tensor last = currentSegmentTensor;
-                currentSegmentTensor = cat([currentSegmentTensor, lstmOutput.Data]).MoveToOuterDisposeScope();
+                currentSegmentTensor = cat([lstmOutput.Data, currentSegmentTensor]).MoveToOuterDisposeScope();
                 last.Dispose();
             }
 
@@ -119,31 +113,49 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
         if (currentSegmentTensor is null)
             throw new NullReferenceException("Current segment is null");
 
-        Tensor output = currentSegmentTensor[TensorIndex.Colon, -1];
+        using Tensor segmentTensor = currentSegmentTensor[TensorIndex.Colon, -1];
+        Tensor output = segmentTensor.flip(0);
         currentSegmentTensor.Dispose();
 
         return new LstmData(output, lastHiddenState);
     }
 
-    public void Load(Stream modelSafetensors)
+    public void Reset()
     {
-        Safetensors safetensors = Safetensors.Load(modelSafetensors);
-        Dictionary<string, Tensor> stateDict = safetensors.ToStateDict();
+        using IDisposable noGrad = no_grad();
 
-        (IList<string> missingKeys, IList<string> unexpectedKeys) = load_state_dict(stateDict);
+        foreach (Parameter param in parameters())
+            param.fill_(0);
+    }
 
-        foreach (string missingKey in missingKeys)
-            Console.WriteLine($"Missing key: {missingKey}");
+    public void Load(Stream model)
+    {
+        //Safetensors safetensors = Safetensors.Load(modelSafetensors);
+        //Dictionary<string, Tensor> stateDict = safetensors.ToStateDict();
 
-        foreach (string unexpectedKey in unexpectedKeys)
-            Console.WriteLine($"Unexpected key: {unexpectedKey}");
+        //(IList<string> missingKeys, IList<string> unexpectedKeys) = load_state_dict(stateDict);
 
-        if (missingKeys.Count > 0 || unexpectedKeys.Count > 0)
-        {
-            Console.WriteLine("Unable to continue. Fix the model then retry.");
-            Console.ReadLine();
-            Environment.Exit(0);
-        }
+        //foreach (string missingKey in missingKeys)
+        //    Console.WriteLine($"Missing key: {missingKey}");
+
+        //foreach (string unexpectedKey in unexpectedKeys)
+        //    Console.WriteLine($"Unexpected key: {unexpectedKey}");
+
+        //if (missingKeys.Count > 0 || unexpectedKeys.Count > 0)
+        //{
+        //    Console.WriteLine("Unable to continue. Fix the model then retry.");
+        //    Console.ReadLine();
+        //    Environment.Exit(0);
+        //}
+
+        using BinaryReader reader = new BinaryReader(model);
+        load(reader, true);
+    }
+
+    public void Save(Stream model)
+    {
+        using BinaryWriter writer = new BinaryWriter(model);
+        save(writer);
     }
 
     public void SetDevice(DeviceType device)
@@ -162,11 +174,11 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
         Tensor output = _fc.forward(dropOut);
         (Tensor H0, Tensor C0)? hiddenState = lstm.DetachHiddenState();
 
-        //Console.WriteLine($"Forward: lstm.Data requires grad: {lstm.Data.requires_grad} (is null: {lstmData.grad is null})");
-        //Console.WriteLine($"Forward: lstmData requires grad: {lstmData.requires_grad} (is null: {lstmData.grad is null})");
-        //Console.WriteLine($"Forward: dropOut requires grad: {dropOut.requires_grad} (is null: {lstmData.grad is null})");
-        //Console.WriteLine($"Forward: fc (output) requires grad: {output.requires_grad} (is null: {output.grad is null})");
-
         return new LstmData(output, hiddenState);
+    }
+
+    public IEnumerable<Parameter> GetParameters()
+    {
+        return parameters();
     }
 }

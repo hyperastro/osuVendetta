@@ -12,6 +12,8 @@ namespace osuVendetta.Core.Replays;
 
 public class ReplayProcessor : IReplayProcessor
 {
+    public AntiCheatModelConfig AntiCheatModelConfig => _model.Config;
+
     readonly IAntiCheatModel _model;
 
     public ReplayProcessor(IAntiCheatModel anticheatModel)
@@ -36,13 +38,18 @@ public class ReplayProcessor : IReplayProcessor
         }
     }
 
+    public static float Normalize(double value, double mean, double stdDev)
+    {
+        return (float)((value - mean) / stdDev);
+    }
+
     public ReplayTokens CreateTokensParallel(Stream replayData)
     {
         Replay replay = ReplayDecoder.Decode(replayData);
         List<ReplayFrame> frames = replay.ReplayFrames;
 
-        // include the first chunk being 1000 frames instead of 500 (-size, +1)
         int totalChunks = (int)Math.Ceiling((float)frames.Count / _model.Config.StepsPerChunk);
+        // include the first chunk being 1000 frames instead of 500 (-size, +1)
         //int totalChunks = (int)Math.Ceiling((frames.Count - _model.Config.StepsPerChunk) / (float)_model.Config.StepOverlay) + 1;
         float[] inputs = new float[totalChunks * _model.Config.TotalFeatureSizePerChunk];
 
@@ -114,11 +121,6 @@ public class ReplayProcessor : IReplayProcessor
         //    inputs[indexOverflow + 4] = inputs[indexMain + 4];
         //    inputs[indexOverflow + 5] = inputs[indexMain + 5];
         //}
-    }
-
-    static float Normalize(double value, double mean, double stdDev)
-    {
-        return (float)((value - mean) / stdDev);
     }
 
     static float GetKeyValue(StandardKeys keys)

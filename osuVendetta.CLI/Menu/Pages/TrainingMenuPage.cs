@@ -1,4 +1,5 @@
 ﻿using osuVendetta.AntiCheatModel128x3;
+using osuVendetta.CLI.Components;
 using osuVendetta.Core.AntiCheat;
 using osuVendetta.Core.Configuration;
 using osuVendetta.Core.IO.Dataset;
@@ -18,21 +19,32 @@ namespace osuVendetta.CLI.Menu.Pages;
 public class TrainingMenuPage : MenuPage
 {
     readonly IAntiCheatModel _model;
-    readonly IReplayProcessor _replayProcessor;
 
-    public TrainingMenuPage(IAntiCheatModel model, IReplayProcessor replayProcessor)
+    public TrainingMenuPage(IAntiCheatModel model)
     {
         _model = model;
-        _replayProcessor = replayProcessor;
+    }
+
+    AntiCheatTrainer CreateTrainer()
+    {
+        CLIConfig config = BaseConfig.Load<CLIConfig>();
+
+        DatasetArchive archiveTrain = DatasetArchive.Load(new FileInfo(config.TrainingDataset));
+        //DatasetArchive archiveTest = DatasetArchive.Load(new FileInfo(config.TestDataset));
+
+        ReplayDatasetProvider providerTrain = new ReplayDatasetProvider(archiveTrain, true);
+        //ReplayDatasetProvider providerTest = new ReplayDatasetProvider(archiveTest, false);
+
+        TrainingProgressDisplay progressDisplay = new TrainingProgressDisplay();
+
+        return new AntiCheatTrainer((AntiCheatModel128x3.AntiCheatModel128x3)_model,
+            providerTrain, providerTrain,
+            progressDisplay);
     }
 
     public override async Task<MenuPageResponse> DisplayAsync()
     {
-        double current = 0;
-        double max = 0;
         string title = string.Empty;
-
-        AntiCheatTrainer trainer = new AntiCheatTrainer((AntiCheatModel128x3.AntiCheatModel128x3)_model);
 
         double processedReplays = 0;
         double maxReplays = 0;
@@ -55,42 +67,20 @@ public class TrainingMenuPage : MenuPage
             }
         });
 
-        await AnsiConsole.Progress().StartAsync(async progressContext =>
-        {
-            ProgressTask progress = progressContext.AddTask("Training...");
-            ProgressReporter progressReporter = new ProgressReporter(
-                value =>
-                {
-                    progress.Increment(value);
-                    processedReplays += value;
 
-                    if (processedReplays >= 40)
-                    {
-                        processedReplays = 0;
-                        start = DateTime.Now;
-                    }
-                },
-                value => progress.Value(processedReplays = value),
-                value => progress.MaxValue(maxReplays = value),
-                title => progress.Description(title));
+        AntiCheatTrainer trainer = CreateTrainer();
+        Task trackerTask = trainer.TrainingTracker.DisplayAsync(CancellationToken.None);
+
+        await Task.Run(() =>
+        {
+            CLIConfig config = BaseConfig.Load<CLIConfig>();
 
             rpsTask.Start();
-
-            await Task.Run(() =>
-            {
-                CLIConfig config = BaseConfig.Load<CLIConfig>();
-
-                trainer.RunTraining(new ReplayDatasetProvider(
-                    _replayProcessor,
-                    [
-                        new ReplayDatasetInfo(ReplayDatasetClass.Normal, new DirectoryInfo(config.TrainingNormalDatasetDirectory).EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList()),
-                        new ReplayDatasetInfo(ReplayDatasetClass.Relax, new DirectoryInfo(config.TrainingRelaxDatasetDirectory).EnumerateFiles("*.txt", SearchOption.AllDirectories).ToList())
-                    ]),
-                    progressReporter);
-            });
-
-            rpsTask.Dispose();
+            trainer.Train(9999, CancellationToken.None);
         });
+
+        rpsTask.Dispose();
+        trackerTask.Dispose();
 
         AnsiConsole.WriteLine("Press any key to return");
         Console.Title = originalConsoleTitle;

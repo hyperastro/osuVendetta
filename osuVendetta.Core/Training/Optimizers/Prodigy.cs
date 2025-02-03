@@ -12,9 +12,9 @@ using static TorchSharp.torch.optim;
 using System;
 using System.ComponentModel.Design;
 
-namespace osuVendetta.Core.Optimizers;
+namespace osuVendetta.Core.Training.Optimizers;
 
-public class Prodigy : OptimizerHelper, optim.IBetas
+public class Prodigy : OptimizerHelper, IBetas
 {
     public (double, double) Betas
     {
@@ -35,7 +35,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
         float eps = 1e-8f, float weightDecay = 0, bool decouple = true, bool useBiasCorrection = false,
         bool safeguardWarmup = false, float d0 = 1e-6f, float dCoef = 1f, float growthRate = float.PositiveInfinity,
         long sliceP = 1) :
-        this([ new ParamGroup(parameters) ], learningRate, beta1, beta2, beta3, eps, weightDecay, decouple, useBiasCorrection, safeguardWarmup, 
+        this([new ParamGroup(parameters)], learningRate, beta1, beta2, beta3, eps, weightDecay, decouple, useBiasCorrection, safeguardWarmup,
             d0, dCoef, growthRate, sliceP)
     {
     }
@@ -169,7 +169,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                 {
                     //			# we use d / d0 instead of just d to avoid getting values that are too small
                     Tensor slicedGrad = grad.flatten().slice(0, 0, -1, sliceP);
-                    deltaNumerator += (d / _d0) * dlr * dot(slicedGrad, p0 - p.flatten().slice(0, 0, -1, sliceP)).item<float>();
+                    deltaNumerator += d / _d0 * dlr * dot(slicedGrad, p0 - p.flatten().slice(0, 0, -1, sliceP)).item<float>();
 
                     //			# Adam EMA updates
                     if (beta1 > 0)
@@ -180,9 +180,9 @@ public class Prodigy : OptimizerHelper, optim.IBetas
                     expAvgSq.mul_(beta2).addcmul_(grad, grad, value: d * d * (1 - beta2));
 
                     if (safeguardWarmup)
-                        s.mul_(beta3).add_(slicedGrad, alpha: (d / _d0) * d);
+                        s.mul_(beta3).add_(slicedGrad, alpha: d / _d0 * d);
                     else
-                        s.mul_(beta3).add_(slicedGrad, alpha: (d / _d0) * dlr);
+                        s.mul_(beta3).add_(slicedGrad, alpha: d / _d0 * dlr);
                     dDenom += s.abs().sum().item<float>();
                 }
             }
@@ -709,7 +709,7 @@ public class Prodigy : OptimizerHelper, optim.IBetas
         }
     }
 
-    public class ParamGroup : ParamGroup<Options>, optim.IBetas/*, IDisposable*/
+    public class ParamGroup : ParamGroup<Options>, IBetas/*, IDisposable*/
     {
         public bool IsDisposed { get; private set; }
 

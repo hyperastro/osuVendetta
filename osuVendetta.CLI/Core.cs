@@ -3,18 +3,13 @@ using Google.Protobuf.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using osuVendetta.CLI.Components;
 using osuVendetta.CLI.Services;
 using osuVendetta.Core.Anticheat.Benchmark;
 using osuVendetta.Core.AntiCheat;
-using osuVendetta.Core.IO;
 using osuVendetta.Core.Replays;
 using Spectre.Console;
 using Spectre.Console.Cli;
-using System.ComponentModel;
-using System.Diagnostics;
-using Tensorboard;
-using TorchSharp;
-using static TorchSharp.torch;
 
 namespace osuVendetta.CLI;
 
@@ -26,6 +21,12 @@ internal class Program
     static async Task Main(string[] args)
     {
         ConfigDir.OverwriteConfigDir();
+
+        int width = 150;
+        int height = 35;
+
+        Console.SetWindowSize(width, height);
+        Console.SetBufferSize(width, height);
 
         if (args.Length > 0)
             await RunCommandApp(args);

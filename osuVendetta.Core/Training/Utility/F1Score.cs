@@ -4,18 +4,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace osuVendetta.Core.F1;
+namespace osuVendetta.Core.Training.Utility;
 public static class F1Score
 {
 
-        /// <summary>
-        /// Calculates F1 score :)
-        /// </summary>
-        /// <param name="truePositives">The number of true positives</param>
-        /// <param name="falsePositives">The number of false positives</param>
-        /// <param name="falseNegatives">The number of false negatives</param>
-        /// <returns>The F1 score as a float value</returns>
-        public static float CalculateF1Score(int truePositives, int falsePositives, int falseNegatives)
+    /// <summary>
+    /// Calculates F1 score :)
+    /// </summary>
+    /// <param name="truePositives">The number of true positives</param>
+    /// <param name="falsePositives">The number of false positives</param>
+    /// <param name="falseNegatives">The number of false negatives</param>
+    /// <returns>The F1 score as a float value</returns>
+    public static float CalculateF1Score(int truePositives, int falsePositives, int falseNegatives)
     {
         if (truePositives == 0) return 0.0f;  // Avoid division by zero, precision is undefined in this case.
 
@@ -38,7 +38,7 @@ public static class F1Score
         float precision = truePositives / (float)(truePositives + falsePositives);
 
         return precision;
-        }
+    }
 
     /// <summary>
     /// Calculates Recall
@@ -53,7 +53,7 @@ public static class F1Score
         float recall = truePositives / (float)(truePositives + falseNegatives);
 
         return recall;
-        }
+    }
 
 
 }

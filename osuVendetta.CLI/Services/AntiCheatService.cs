@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Hosting;
 using osuVendetta.Core.Anticheat.Data;
 using osuVendetta.Core.AntiCheat;
+using osuVendetta.Core.Configuration;
 using osuVendetta.Core.IO;
 using osuVendetta.Core.Replays;
 using osuVendetta.Core.Replays.Data;
@@ -43,6 +44,14 @@ internal class AntiCheatService : IHostedService
         AnsiConsole.WriteLine($"Model device type: {device}");
         Console.Title = $"osu!Vendetta | Device: {device}";
         _antiCheatModel.SetDevice(device);
+
+        CLIConfig config = BaseConfig.Load<CLIConfig>();
+
+        if (File.Exists(config.ModelPath))
+        {
+            using FileStream modelStream = File.OpenRead(config.ModelPath);
+            _antiCheatModel.Load(modelStream);
+        }
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

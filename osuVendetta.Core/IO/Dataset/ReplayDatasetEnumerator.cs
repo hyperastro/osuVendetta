@@ -7,131 +7,65 @@ namespace osuVendetta.Core.IO.Dataset;
 
 public class ReplayDatasetEnumerator : IEnumerator
 {
-    public object Current { get; private set; }
+    public object? Current { get; private set; }
 
-    readonly Dictionary<ReplayDatasetClass, ReplayDatasetInfo> _datasets;
-    readonly IReplayProcessor _replayProcessor;
-
-    ReplayDatasetClass _currentClass;
     int _currentIndex;
 
-    public ReplayDatasetEnumerator(IReplayProcessor replayProcessor, Dictionary<ReplayDatasetClass, ReplayDatasetInfo> datasets)
+    readonly DatasetArchive _datasetArchive;
+    readonly bool _shuffle;
+    readonly HashSet<int> _usedIndices;
+
+    public ReplayDatasetEnumerator(DatasetArchive datasetArchive, bool shuffle)
     {
-        _datasets = datasets;
-        _replayProcessor = replayProcessor;
-        Current = LoadEntry(_datasets[_currentClass].Entries[0], _currentClass);
+        _datasetArchive = datasetArchive;
+        _shuffle = shuffle;
+        _usedIndices = new HashSet<int>();
     }
 
     public bool MoveNext()
     {
-        _currentIndex++;
-
-        // reached end
-        if (_currentIndex >= _datasets[_currentClass].Entries.Count)
+        if (_shuffle)
         {
-            ReplayDatasetClass nextClass = (ReplayDatasetClass)((int)_currentClass + 1);
-
-            if (!_datasets.ContainsKey(nextClass))
+            if (_usedIndices.Count == _datasetArchive.Count)
+            {
+                Reset();
                 return false;
+            }
 
-            _currentClass = nextClass;
-            _currentIndex = 0;
+            do
+            {
+                _currentIndex = Random.Shared.Next(0, _datasetArchive.Count);
+            }
+            while (_usedIndices.Contains(_currentIndex));
+
+            _usedIndices.Add(_currentIndex);
+            ReadEntry();
+
+            return true;
         }
-        
-        object? entry = LoadEntry(_datasets[_currentClass].Entries[_currentIndex], _currentClass);
+        else
+        {
+            if (_currentIndex == _datasetArchive.Count)
+            {
+                Reset();
+                return false;
+            }
 
-        if (entry is null)
-            return MoveNext();
+            _currentIndex++;
+            ReadEntry();
 
-        Current = LoadEntry(_datasets[_currentClass].Entries[_currentIndex], _currentClass)!;
-        return true;
+            return true;
+        }
     }
 
     public void Reset()
     {
-        _currentClass = default;
         _currentIndex = 0;
+        _usedIndices.Clear();
     }
 
-    ReplayDatasetEntry? LoadEntry(FileInfo entry, ReplayDatasetClass @class)
+    void ReadEntry()
     {
-        ReplayTokens tokens;
-
-        if (entry.Extension.Equals(".txt", StringComparison.CurrentCultureIgnoreCase))
-        {
-            string[] lines = File.ReadAllLines(entry.FullName);
-            List<float> inputs = new List<float>();
-
-            foreach (string line in lines)
-            {
-                string[] cells = line.Split(',');
-
-                for (int i = 0; i < 6; i++)
-                {
-                    if (i < cells.Length)
-                    {
-                        if (float.TryParse(cells[i], out float v))
-                        {
-                            if (float.IsNaN(v))
-                                return null;
-
-                            inputs.Add(v);
-                        }
-                        else
-                        {
-                            switch (cells[i].ToLower())
-                            {
-                                case "m1":
-                                    inputs.Add(0);
-                                    break;
-
-                                case "m1m2":
-                                    inputs.Add(1);
-                                    break;
-
-                                case "m2":
-                                    inputs.Add(2);
-                                    break;
-
-                                default:
-                                case "none":
-                                    inputs.Add(3);
-                                    break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        inputs.Add(0);
-                    }
-                }
-
-                foreach (string cell in cells)
-                {
-                }
-            }
-
-            int newInputSize = (int)Math.Ceiling(inputs.Count / 6000.0) * 6000;
-            float[] data = inputs.ToArray();
-
-            if (inputs.Count != newInputSize)
-                Array.Resize(ref data, newInputSize);
-
-            tokens = new ReplayTokens
-            {
-                Tokens = data
-            };
-        }
-        else
-        {
-            using FileStream replayStream = entry.OpenRead();
-            tokens = _replayProcessor.CreateTokensParallel(replayStream);
-        }
-
-        return new ReplayDatasetEntry
-        {
-            Class = @class,
-            ReplayTokens = tokens
-        };
+        Current = _datasetArchive[_currentIndex];
     }
 }

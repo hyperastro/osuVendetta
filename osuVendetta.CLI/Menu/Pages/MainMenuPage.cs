@@ -12,6 +12,7 @@ public class MainMenuPage : MenuPage
     const string _RUN_BENCHMARK_CHOICE = "Benchmark";
     const string _TRAININGS_CHOICE = "Training";
     const string _SETTINGS_CHOICE = "Settings";
+    const string _CREATE_DATASET_CHOICE = "Create Dataset";
     const string _EXIT_CHOICE = "Exit";
 
     string? _errorMessage;
@@ -33,6 +34,7 @@ public class MainMenuPage : MenuPage
             .AddChoices(_RUN_INFERENCE_CHOICE,
                         _RUN_BENCHMARK_CHOICE,
                         _TRAININGS_CHOICE,
+                        _CREATE_DATASET_CHOICE,
                         _SETTINGS_CHOICE,
                         _EXIT_CHOICE));
 
@@ -51,6 +53,9 @@ public class MainMenuPage : MenuPage
 
             case _TRAININGS_CHOICE:
                 return MenuPageResponse.NextPage<TrainingMenuPage>();
+
+            case _CREATE_DATASET_CHOICE:
+                return MenuPageResponse.NextPage<CreateDatasetPage>();
 
             case _EXIT_CHOICE:
                 return MenuPageResponse.Exit();

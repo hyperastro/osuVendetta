@@ -1,6 +1,6 @@
 ﻿using static TorchSharp.torch;
 
-namespace osuVendetta.AntiCheatModel128x3;
+namespace osuVendetta.Core.Training.Utility;
 
 public class LstmData : IDisposable
 {
@@ -43,7 +43,7 @@ public class LstmData : IDisposable
             return;
 
         Data.Dispose();
-        
+
         if (HiddenState is not null)
         {
             HiddenState.Value.H0.Dispose();
