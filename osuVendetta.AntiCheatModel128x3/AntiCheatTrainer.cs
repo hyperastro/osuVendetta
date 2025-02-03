@@ -5,6 +5,7 @@ using osuVendetta.Core.IO.Dataset;
 using TorchSharp;
 using osuVendetta.Core.Training;
 using osuVendetta.Core.AntiCheat;
+using osuVendetta.Core.Training.Optimizers;
 
 namespace osuVendetta.AntiCheatModel128x3;
 
@@ -29,7 +30,7 @@ public class AntiCheatTrainer : DatasetTrainer
 
     protected override lr_scheduler.LRScheduler? CreateScheduler()
     {
-        //return lr_scheduler.CosineAnnealingLR(optimizer, _epochTrainingLimit);
+        //return lr_scheduler.CosineAnnealingLR(Optimizer, GlobalMaxEpochs);
         return lr_scheduler.ReduceLROnPlateau(Optimizer, mode: "min", factor: 0.5, patience: 5, verbose: true, min_lr: [1e-6]);
         return null;
     }

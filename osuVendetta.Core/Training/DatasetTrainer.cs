@@ -3,6 +3,7 @@ using osuVendetta.Core.AntiCheat;
 using osuVendetta.Core.IO.Dataset;
 using osuVendetta.Core.Replays.Data;
 using osuVendetta.Core.Training.Utility;
+using System.Diagnostics;
 using TorchSharp;
 using TorchSharp.Modules;
 using static TorchSharp.torch;
@@ -115,7 +116,7 @@ public abstract class DatasetTrainer : IDatasetTrainer
             double replaysPerSecond = _totalReplays / diff.TotalSeconds;
 
             TrainingTracker.SetFooter(
-$"Max batch size: {AntiCheatModel.MaxBatchSize}" +
+$"Max batch size: {AntiCheatModel.MaxBatchSize}\n" +
 $"Largest replay token size: {_largestReplayTokenSize} (KBytes: {_largestReplayTokenSize * sizeof(float) / 1000}, in batches: {(int)Math.Ceiling(_largestReplayTokenSize / (double)AntiCheatModel.Config.TotalFeatureSizePerChunk)})\n" +
 $"Largest token size processed: {_largestTokenSize} (KBytes: {_largestTokenSize * sizeof(float) / 1000}, in batches: {(int)Math.Ceiling(_largestTokenSize / (double)AntiCheatModel.Config.TotalFeatureSizePerChunk)})\n" +
 $"Largest output size: {_largestSegmentSize}\n" +
@@ -232,6 +233,8 @@ $"Replays per second: {replaysPerSecond:n1}");
         {
             Span<float> tokensRemaining = new Span<float>(args.Replay.ReplayTokens.Tokens);
 
+            (Tensor H0, Tensor C0)? lastData = null;
+
             while (tokensRemaining.Length > 0)
             {
                 int toTake = Math.Min(tokensRemaining.Length, maxFeatureSize);
@@ -239,31 +242,38 @@ $"Replays per second: {replaysPerSecond:n1}");
                 Span<float> tokens = tokensRemaining[..toTake];
                 tokensRemaining = tokensRemaining[toTake..];
 
+                float[] currentTokens = new float[maxFeatureSize];
+                tokens.CopyTo(currentTokens);
+
                 ReplayTokens replayTokens = new ReplayTokens
                 {
-                    Tokens = tokens.ToArray()
+                    Tokens = currentTokens
                 };
 
-                RunTrainingInference(replayTokens, args.Replay.Class);
+                (Tensor H0, Tensor C0) data = RunTrainingInference(replayTokens, args.Replay.Class, lastData);
+
+                lastData?.H0.Dispose();
+                lastData?.C0.Dispose();
+                lastData = data;
             }
         }
         else
         {
-            RunTrainingInference(args.Replay.ReplayTokens, args.Replay.Class);
+           _ = RunTrainingInference(args.Replay.ReplayTokens, args.Replay.Class);
         }
 
         nn.utils.clip_grad_norm_(AntiCheatModel.GetParameters(), MaxGradNorm);
         _ = Optimizer.step();
     }
 
-    void RunTrainingInference(ReplayTokens tokens, ReplayDatasetClass @class)
+    (Tensor H0, Tensor C0) RunTrainingInference(ReplayTokens tokens, ReplayDatasetClass @class, (Tensor H0, Tensor C0)? hiddenStates = null)
     {
         if (tokens.Tokens.Length > _largestTokenSize)
             _largestTokenSize = tokens.Tokens.Length;
 
         using IDisposable scope = NewDisposeScope();
 
-        using LstmData data = AntiCheatModel.RunInference(tokens, true);
+        LstmData data = AntiCheatModel.RunInference(tokens, true, hiddenStates);
         Tensor classLabels = CreateClassLabels((int)data.Data.shape[0], @class);
         Tensor loss = LossCriterion.forward(data.Data, classLabels);
 
@@ -273,6 +283,12 @@ $"Replays per second: {replaysPerSecond:n1}");
             _largestSegmentSize = (int)data.Data.shape[0];
 
         _totalSegmentSteps++;
+
+        (Tensor H0, Tensor C0) result = data.HiddenState!.Value;
+        result.H0.MoveToOuterDisposeScope();
+        result.C0.MoveToOuterDisposeScope();
+
+        return result;
     }
 
     Tensor CreateClassLabels(int length, ReplayDatasetClass @class)

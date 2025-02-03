@@ -65,6 +65,19 @@ public unsafe class DatasetArchive
         get => GetDatasetEntry(index);
     }
 
+    public void ExportContentInfo(FileInfo destTxtFile)
+    {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < Count; i++)
+        {
+            ReplayDatasetEntry entry = this[i];
+            sb.AppendLine($"{i}: {entry.Class}");
+        }
+
+       System.IO.File.WriteAllText(destTxtFile.FullName, sb.ToString());
+    }
+
     public static DatasetArchive Load(FileInfo file)
     {
         return new DatasetArchive(file);
