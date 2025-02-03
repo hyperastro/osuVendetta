@@ -47,7 +47,7 @@ internal class AntiCheatService : IHostedService
 
         CLIConfig config = BaseConfig.Load<CLIConfig>();
 
-        if (File.Exists(config.ModelPath))
+        if (!string.IsNullOrEmpty(config.ModelPath) && File.Exists(config.ModelPath))
         {
             using FileStream modelStream = File.OpenRead(config.ModelPath);
             _antiCheatModel.Load(modelStream);
