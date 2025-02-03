@@ -30,10 +30,19 @@ public class TrainingMenuPage : MenuPage
         CLIConfig config = BaseConfig.Load<CLIConfig>();
 
         DatasetArchive archiveTrain = DatasetArchive.Load(new FileInfo(config.TrainingDataset));
-        //DatasetArchive archiveTest = DatasetArchive.Load(new FileInfo(config.TestDataset));
-
         ReplayDatasetProvider providerTrain = new ReplayDatasetProvider(archiveTrain, true);
-        //ReplayDatasetProvider providerTest = new ReplayDatasetProvider(archiveTest, false);
+
+        ReplayDatasetProvider providerTest;
+
+        if (!string.IsNullOrEmpty(config.TestDataset))
+        {
+            DatasetArchive archiveTest = DatasetArchive.Load(new FileInfo(config.TestDataset));
+            providerTest = new ReplayDatasetProvider(archiveTest, false);
+        }
+        else
+        {
+            providerTest = providerTrain;
+        }
 
         TrainingProgressDisplay progressDisplay = new TrainingProgressDisplay();
 
