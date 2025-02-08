@@ -103,7 +103,7 @@ public class ReplayProcessor : IReplayProcessor
         //    indexOverflow = indexMain + _model.Config.StepOverlay;
         //}
 
-        //indexMain *= _model.Config.FeaturesPerStep;
+        indexMain *= _model.Config.FeaturesPerStep;
         //indexOverflow *= _model.Config.FeaturesPerStep;
 
         inputs[indexMain + 0] = Normalize(currentFrame.TimeDiff, scalerMean.DimensionDeltaTime, scalerStd.DimensionDeltaTime);
