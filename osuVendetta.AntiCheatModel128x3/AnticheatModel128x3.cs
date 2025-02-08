@@ -122,14 +122,19 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
 
     public void Reset()
     {
-    using IDisposable noGrad = no_grad();
-
-    foreach (Parameter param in parameters())
+        using IDisposable noGrad = no_grad();
+    
+        foreach (Parameter param in parameters())
         {
-        if (param.dim() > 1)
-            nn.init.kaiming_normal_(param);  // Kaiming initialization keeps gradient across neuron/hidden states
-        else
-            param.fill_(0);  
+            if (param.dim() > 1)
+            {
+                // Kaiming initialization keeps gradient across neuron/hidden states
+                nn.init.kaiming_normal_(param);
+            }
+            else
+            {
+                param.fill_(0);
+            }
         }
     }
 
