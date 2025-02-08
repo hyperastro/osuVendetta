@@ -40,7 +40,8 @@ public class ReplayProcessor : IReplayProcessor
 
     public static float Normalize(double value, double mean, double stdDev)
     {
-        return (float)((value - mean) / stdDev);
+        float normalization = (float)((value - mean) / stdDev);
+        return float.IsNaN(normalization) ? 0f : normalization;  // Prevent NaN values
     }
 
     public ReplayTokens CreateTokensParallel(Stream replayData)
@@ -102,7 +103,7 @@ public class ReplayProcessor : IReplayProcessor
         //    indexOverflow = indexMain + _model.Config.StepOverlay;
         //}
 
-        indexMain *= _model.Config.FeaturesPerStep;
+        //indexMain *= _model.Config.FeaturesPerStep;
         //indexOverflow *= _model.Config.FeaturesPerStep;
 
         inputs[indexMain + 0] = Normalize(currentFrame.TimeDiff, scalerMean.DimensionDeltaTime, scalerStd.DimensionDeltaTime);
