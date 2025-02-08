@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using OsuParsers.Decoders;
 using OsuParsers.Replays;
 using OsuParsers.Enums.Replays;
@@ -69,7 +69,16 @@ internal class Program
             float xDiff = frame.X - Interlocked.Exchange(ref lastX, frame.X);
             float yDiff = frame.Y - Interlocked.Exchange(ref lastY, frame.Y);
 
-            strBuilder.Append($"{frame.TimeDiff},{frame.X},{frame.Y},{xDiff},{yDiff},{GetKeyString(frame.StandardKeys)}\n");
+            // Use invariant culture to format numbers with dots
+            string line = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                "{0},{1},{2},{3},{4},{5}\n",
+                frame.TimeDiff,
+                frame.X,
+                frame.Y,
+                xDiff,
+                yDiff,
+                GetKeyString(frame.StandardKeys));
+            strBuilder.Append(line);
         }
 
         File.WriteAllText(Path.Combine(outputDir, $"REPLAYDATA_{replay.ReplayMD5Hash}.txt"), strBuilder.ToString());
