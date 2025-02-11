@@ -5,20 +5,32 @@ using OsuParsers.Replays.Objects;
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text;
-using osuVendetta.Core.AntiCheat.Data;
+//using osuVendetta.Core.AntiCheat.Data;
 using System.Collections.Concurrent;
 using System.Numerics;
 using osuVendetta.CLI.AntiCheat;
-using osuVendetta.Core.AntiCheat;
+//using osuVendetta.Core.AntiCheat;
 using Spectre.Console;
+using osuVendetta.Core.AntiCheat;
+using osuVendetta.Core.Replays;
+using osuVendetta.CoreLib.AntiCheat.Data;
+using osuVendetta.Core.Replays.Data;
+using osuVendetta.Core.AntiCheat.Data;
 
 namespace osuVendetta.CLI;
 
 internal partial class Program
 {
+    static AntiCheatConfig? _antiCheatConfig;
+    static AntiCheatRunner? _antiCheatRunner;
+
+    static bool _isAntiCheatLoadedOnRun;
+    static bool _runInParallel;
 
     static async Task Main(string[] args)
     {
+        _isAntiCheatLoadedOnRun = await LoadAntiCheatAsync();
+
         if (args.Length > 0)
         {
             List<FileInfo> filesToProcess = new List<FileInfo>();
@@ -52,6 +64,10 @@ internal partial class Program
 
                         filesToProcess.AddRange(dir.EnumerateFiles("*.osr", SearchOption.AllDirectories));
                         break;
+
+                    case "-parallel":
+                        _runInParallel = true;
+                        break;
                 }
             }
 
@@ -62,7 +78,7 @@ internal partial class Program
             }
 
             Console.WriteLine($"Processing {filesToProcess.Count} files...");
-            await ProcessFiles(filesToProcess);
+            await ProcessFiles(filesToProcess, _runInParallel);
 
             Console.WriteLine();
             Console.WriteLine("———");
@@ -79,8 +95,13 @@ internal partial class Program
         const string PROCESS_FOLDER_OPTION = "Process Folder";
         const string EXIT_OPTION = "Exit";
 
+        string extraInfo = string.Empty;
+
+        if (!_isAntiCheatLoadedOnRun)
+            extraInfo = "(AntiCheat config not found, you will be asked to create or specify one in a later step)\n";
+
         string result = AnsiConsole.Prompt(new SelectionPrompt<string>()
-            .Title("osu!Vendetta Main Menu\n\nPick an option from the list below (arrow keys):")
+            .Title($"osu!Vendetta Main Menu\n\n{extraInfo}Pick an option from the list below (arrow keys):")
             .AddChoices(new string[]
             {
                 PROCESS_FILE_OPTION,
@@ -118,11 +139,7 @@ internal partial class Program
                        .Trim('"');
         }
 
-        await ProcessFiles(new List<FileInfo> { new FileInfo(filePath) });
-
-        Console.WriteLine();
-        Console.WriteLine("———");
-        Console.WriteLine();
+        await MenuProcess(new List<FileInfo> { new FileInfo(filePath) });
     }
 
     static async Task MenuProcessFolder()
@@ -139,50 +156,96 @@ internal partial class Program
                          .Trim('"');
         }
 
-        await ProcessFiles(new DirectoryInfo(folderPath)
+        await MenuProcess(new DirectoryInfo(folderPath)
             .EnumerateFiles("*.osr", SearchOption.AllDirectories)
             .ToList());
+    }
+
+    static async Task MenuProcess(List<FileInfo> files)
+    {
+        const string RUN_IN_PARALLEL_PROMPT = "Do you want to run in parallel? (multithreaded)";
+        const string NEW_CONFIG_PATH_PROMPT = "No config found, please specify a custom path or leave it empty to create one";
+        const string CREATE_CONFIG_PROMPT = "No config found, do you want to create a default one?";
+        const string CONFIG_SAVE_PATH = "anticheat.config";
+
+        bool runInParallel = AnsiConsole.Prompt(new TextPrompt<bool>(RUN_IN_PARALLEL_PROMPT));
+
+        if (!_isAntiCheatLoadedOnRun)
+        {
+            string configPath = AnsiConsole.Prompt(new TextPrompt<string>(NEW_CONFIG_PATH_PROMPT)
+            {
+                AllowEmpty = true
+            });
+
+            if (string.IsNullOrEmpty(configPath) || !File.Exists(configPath) ||
+                !await LoadAntiCheatAsync(configPath))
+            {
+                bool createDefaultConfig = AnsiConsole.Prompt(new TextPrompt<bool>(CREATE_CONFIG_PROMPT));
+
+                if (createDefaultConfig)
+                {
+                    AntiCheatConfig defaultConfig = AntiCheatModel192x2.CreateDefaultConfigForModel();
+                    File.WriteAllText(CONFIG_SAVE_PATH, defaultConfig.ToJson());
+
+                    Console.WriteLine($"Config created and saved to {CONFIG_SAVE_PATH}");
+                    Console.ReadKey();
+                    Environment.Exit(1);
+                }
+
+                Console.WriteLine("Config not found, press any key to exit...");
+                Console.ReadKey();
+                Environment.Exit(1);
+            }
+        }
+
+        Console.WriteLine("Running anticheat");
+
+        await ProcessFiles(files, runInParallel);
 
         Console.WriteLine();
         Console.WriteLine("———");
         Console.WriteLine();
     }
 
+
     static void MenuExit()
     {
         Environment.Exit(0);
     }
 
-    record class ModelOutput(string File, AntiCheatResult Result);
+    record class ModelOutput(string File, Replay Replay, AntiCheatResult Result, string ResultType);
 
-    static async Task ProcessFiles(List<FileInfo> files)
+    static async Task ProcessFiles(List<FileInfo> files, bool runInParallel)
     {
-        const string CSV_PATTERN = "\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\",\"{5}\"";
+        const string CSV_PATTERN = "\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\"";
 
-        AntiCheatModelProvider provider = new AntiCheatModelProvider();
-        AntiCheatService service = new AntiCheatService(provider);
-        IAntiCheatModel model = await provider.LoadModelAsync(new AntiCheatProviderArgs());
+        // TODO: ask to load or create default config if config not found
+        ArgumentNullException.ThrowIfNull(_antiCheatRunner);
 
+        //IAntiCheatModel model = new AntiCheatModel192x2();
+        //ReplayProcessor replayProcessor = new ReplayProcessor(_antiCheatConfig);
         ConcurrentQueue<ModelOutput> modelOutput = new ConcurrentQueue<ModelOutput>();
 
         await Parallel.ForEachAsync(files, async (file, _) =>
         {
-            try
+            Replay replay = ReplayDecoder.Decode(file.FullName);
+            BaseAntiCheatResult antiCheatResult = await _antiCheatRunner.ProcessReplayAsync(replay, runInParallel);
+
+            if (antiCheatResult is AntiCheatResult result)
             {
+                string resultType = "Normal";
+                double probabilityCheating = 100f - result.CheatProbability.Normal;
 
-            List<ReplayFrame> replayFrames = ReplayDecoder.Decode(file.FullName).ReplayFrames;
+                if (result.CheatProbability.Relax >= 0.5)
+                    resultType = "Relax";
 
-            float[] inputData = service.ProcessReplayTokensNew(replayFrames);
-            long[] dimensions = service.CreateModelDimensionsFor(inputData);
+                modelOutput.Enqueue(new ModelOutput(file.Name, replay, result, resultType));
 
-            AntiCheatResult result = await model.RunModelAsync(new InputArgs(inputData, dimensions));
-            modelOutput.Enqueue(new ModelOutput(file.Name, result));
-
-            Console.WriteLine($"Result for {file}:\n\t{result.Type} (Probability of cheating: {(100f - result.ProbabilityResult.ProbabilityNormal):N2}%) ({result.Message ?? string.Empty})");
+                Console.WriteLine($"Result for {file}:\n\t{resultType} (Probability of cheating: {probabilityCheating:N2}%)");
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine($"Something went wrong processing the file: {file.Name}:\n{ex}");
+                Console.WriteLine($"Something went wrong processing the file: {file.Name}:\n{antiCheatResult}");
             }
         });
 
@@ -193,11 +256,10 @@ internal partial class Program
         {
             output.AppendLine(string.Format(CSV_PATTERN,
                 result.File,
-                result.Result.Type,
-                result.Result.Metadata?.Player ?? "Unkown Player",
-                result.Result.ProbabilityResult.ProbabilityNormal,
-                result.Result.ProbabilityResult.ProbabilityRelax,
-                result.Result.Message ?? string.Empty));
+                result.ResultType,
+                result.Replay.PlayerName ?? "Unkown Player",
+                result.Result.CheatProbability.Normal,
+                result.Result.CheatProbability.Relax));
         }
 
         DateTime date = DateTime.Now;
@@ -205,5 +267,28 @@ internal partial class Program
 
         File.WriteAllText(csvName, output.ToString());
         Console.WriteLine($"Saved report to: {Path.Combine(Environment.CurrentDirectory, csvName)}");
+    }
+
+    static async Task<bool> LoadAntiCheatAsync(string configPath = "anticheat.config", string modelPath = "192x2.onnx")
+    {
+        if (!File.Exists(configPath) || !File.Exists(modelPath))
+            return false;
+
+        AntiCheatConfig? config = AntiCheatConfig.FromJson(File.ReadAllText(configPath));
+
+        if (config is null)
+            return false;
+
+        AntiCheatModel192x2 model = new AntiCheatModel192x2();
+        await model.LoadAsync(new AntiCheatModelLoadArgs
+        {
+            AntiCheatConfig = config,
+            ModelBytes = File.ReadAllBytes(modelPath)
+        });
+
+        _antiCheatConfig = config;
+        _antiCheatRunner = new AntiCheatRunner(model, config);
+
+        return true;
     }
 }
