@@ -32,9 +32,9 @@ public class AntiCheatModelConfig
     /// <summary>
     /// Value scaler for mean
     /// </summary>
-    public required ScalerValues ScalerMean { get; set; }
+    public required ScalerValues StandardMean { get; set; }
     /// <summary>
     /// Value scaler for std
     /// </summary>
-    public required ScalerValues ScalerStd { get; set; }
+    public required ScalerValues StandardDeviation { get; set; }
 }

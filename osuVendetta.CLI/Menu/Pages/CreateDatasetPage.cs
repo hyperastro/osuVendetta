@@ -56,10 +56,13 @@ public class CreateDatasetPage : MenuPage
 
         await progress.StartAsync(async context =>
         {
-            ProgressTask progressTask = context.AddTask("Replay", maxValue: datasets.Values.Sum(d => d.Count));
+            int totalEntries = datasets.Values.Sum(d => d.Count);
+
+            ProgressTask progressTask = context.AddTask("Replay", maxValue: totalEntries);
+            ProgressTask progressScalersTask = context.AddTask("Scalers", maxValue: totalEntries * 2);
 
             DatasetArchive.Create(new FileInfo(destinationPath),
-                datasets, _replayProcessor, progressTask);
+                datasets, _replayProcessor, progressTask, progressScalersTask);
         });
 
 

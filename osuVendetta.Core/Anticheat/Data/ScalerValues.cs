@@ -5,9 +5,9 @@
 /// </summary>
 public class ScalerValues
 {
-    public required float DimensionDeltaTime { get; set; }
-    public required float DimensionX { get; set; }
-    public required float DimensionY { get; set; }
-    public required float DimensionDeltaX { get; set; }
-    public required float DimensionDeltaY { get; set; }
+    public required float DeltaTime { get; set; }
+    public required float X { get; set; }
+    public required float Y { get; set; }
+    public required float DeltaX { get; set; }
+    public required float DeltaY { get; set; }
 }

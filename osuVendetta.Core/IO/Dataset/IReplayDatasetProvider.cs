@@ -11,4 +11,5 @@ namespace osuVendetta.Core.IO.Dataset;
 public interface IReplayDatasetProvider : IEnumerable
 {
     int TotalReplays { get; }
+    public DatasetScalerValues DatasetScalerValues { get; }
 }

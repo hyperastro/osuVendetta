@@ -38,10 +38,18 @@ public class ReplayProcessor : IReplayProcessor
         }
     }
 
-    public static float Normalize(double value, double mean, double stdDev)
+    public static float Normalize(double value, double mean, double dev)
     {
-        float normalization = (float)((value - mean) / stdDev);
+        float normalization = (float)((value - mean) / dev);
+
         return float.IsNaN(normalization) ? 0f : normalization;  // Prevent NaN values
+    }
+
+    public static float DeNormalize(double value, double mean, double dev)
+    {
+        float denormalized = (float)((value * dev) + mean);
+
+        return float.IsNaN(denormalized) ? 0f : denormalized;
     }
 
     public ReplayTokens CreateTokensParallel(Stream replayData)
@@ -54,8 +62,8 @@ public class ReplayProcessor : IReplayProcessor
         //int totalChunks = (int)Math.Ceiling((frames.Count - _model.Config.StepsPerChunk) / (float)_model.Config.StepOverlay) + 1;
         float[] inputs = new float[totalChunks * _model.Config.TotalFeatureSizePerChunk];
 
-        ScalerValues mean = _model.Config.ScalerMean;
-        ScalerValues std = _model.Config.ScalerStd;
+        ScalerValues mean = _model.Config.StandardMean;
+        ScalerValues std = _model.Config.StandardDeviation;
         Parallel.For(0, frames.Count, index =>
         {
             ProcessFrame(index, frames, inputs, ref mean, ref std);
@@ -106,11 +114,11 @@ public class ReplayProcessor : IReplayProcessor
         indexMain *= _model.Config.FeaturesPerStep;
         //indexOverflow *= _model.Config.FeaturesPerStep;
 
-        inputs[indexMain + 0] = Normalize(currentFrame.TimeDiff, scalerMean.DimensionDeltaTime, scalerStd.DimensionDeltaTime);
-        inputs[indexMain + 1] = Normalize(currentFrame.X, scalerMean.DimensionX, scalerStd.DimensionX);
-        inputs[indexMain + 2] = Normalize(currentFrame.Y, scalerMean.DimensionY, scalerStd.DimensionY);
-        inputs[indexMain + 3] = Normalize(deltaX, scalerMean.DimensionDeltaX, scalerStd.DimensionDeltaX);
-        inputs[indexMain + 4] = Normalize(deltaY, scalerMean.DimensionDeltaY, scalerStd.DimensionDeltaY);
+        inputs[indexMain + 0] = Normalize(currentFrame.TimeDiff, scalerMean.DeltaTime, scalerStd.DeltaTime);
+        inputs[indexMain + 1] = Normalize(currentFrame.X, scalerMean.X, scalerStd.X);
+        inputs[indexMain + 2] = Normalize(currentFrame.Y, scalerMean.Y, scalerStd.Y);
+        inputs[indexMain + 3] = Normalize(deltaX, scalerMean.DeltaX, scalerStd.DeltaX);
+        inputs[indexMain + 4] = Normalize(deltaY, scalerMean.DeltaY, scalerStd.DeltaY);
         inputs[indexMain + 5] = GetKeyValue(currentFrame.StandardKeys);
 
         //if (indexOverflow > -1 && indexOverflow < inputs.Length)

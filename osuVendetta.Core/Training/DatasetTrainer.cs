@@ -73,12 +73,14 @@ public abstract class DatasetTrainer : IDatasetTrainer
     public void Train(int epochsToTrain, CancellationToken cancellationToken)
     {
         AntiCheatModel.Reset();
+        AntiCheatModel.Config.StandardMean = TrainingDatasetProvider.DatasetScalerValues.StandardMean;
+        AntiCheatModel.Config.StandardDeviation = TrainingDatasetProvider.DatasetScalerValues.StandardDeviation;
 
         int epoch = 0;
 
         while (!cancellationToken.IsCancellationRequested &&
-               epoch < GlobalMaxEpochs &&
-               epoch < epochsToTrain)
+                epoch < GlobalMaxEpochs &&
+                epoch < epochsToTrain)
         {
             EpochStats stats = TrainEpoch(epoch, cancellationToken);
             epoch++;

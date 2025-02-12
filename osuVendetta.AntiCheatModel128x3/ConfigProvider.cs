@@ -25,21 +25,21 @@ internal static class ConfigProvider
             StepsPerChunk = 500,
             FeaturesPerStep = 6,
 
-            ScalerMean = new ScalerValues
+            StandardMean = new ScalerValues
             {
-                DimensionDeltaTime = 14.091803334053385f,
-                DimensionX = 255.94747118245044f,
-                DimensionY = 192.43203651627053f,
-                DimensionDeltaX = 0.006618787601832843f,
-                DimensionDeltaY = 0.06667060675316294f,
+                DeltaTime = 14.091803334053385f,
+                X = 255.94747118245044f,
+                Y = 192.43203651627053f,
+                DeltaX = 0.006618787601832843f,
+                DeltaY = 0.06667060675316294f,
             },
-            ScalerStd = new ScalerValues
+            StandardDeviation = new ScalerValues
             {
-                DimensionDeltaTime = 2178.834268435404f,
-                DimensionX = 211.089933155007f,
-                DimensionY = 363.27989919306765f,
-                DimensionDeltaX = 43.42019885061354f,
-                DimensionDeltaY = 156.50799405495763f,
+                DeltaTime = 2178.834268435404f,
+                X = 211.089933155007f,
+                Y = 363.27989919306765f,
+                DeltaX = 43.42019885061354f,
+                DeltaY = 156.50799405495763f,
             }
         };
     }

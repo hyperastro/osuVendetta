@@ -43,17 +43,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="Data\128x3V2.safetensors">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="TorchSharp" Version="0.105.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\osuVendetta.Core\osuVendetta.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Data\" />
   </ItemGroup>
 
 </Project>

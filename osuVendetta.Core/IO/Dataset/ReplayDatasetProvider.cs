@@ -6,6 +6,7 @@ namespace osuVendetta.Core.IO.Dataset;
 public class ReplayDatasetProvider : IReplayDatasetProvider
 {
     public int TotalReplays => _datasetArchive.Count;
+    public DatasetScalerValues DatasetScalerValues => _datasetArchive.ScalerValues;
 
     readonly DatasetArchive _datasetArchive;
     readonly bool _shuffle;

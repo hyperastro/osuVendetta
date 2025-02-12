@@ -140,24 +140,6 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
 
     public void Load(Stream model)
     {
-        //Safetensors safetensors = Safetensors.Load(modelSafetensors);
-        //Dictionary<string, Tensor> stateDict = safetensors.ToStateDict();
-
-        //(IList<string> missingKeys, IList<string> unexpectedKeys) = load_state_dict(stateDict);
-
-        //foreach (string missingKey in missingKeys)
-        //    Console.WriteLine($"Missing key: {missingKey}");
-
-        //foreach (string unexpectedKey in unexpectedKeys)
-        //    Console.WriteLine($"Unexpected key: {unexpectedKey}");
-
-        //if (missingKeys.Count > 0 || unexpectedKeys.Count > 0)
-        //{
-        //    Console.WriteLine("Unable to continue. Fix the model then retry.");
-        //    Console.ReadLine();
-        //    Environment.Exit(0);
-        //}
-
         using BinaryReader reader = new BinaryReader(model);
         load(reader, true);
     }
