@@ -119,9 +119,9 @@ public abstract class DatasetTrainer : IDatasetTrainer
 
             TrainingTracker.SetFooter(
 $"Max batch size: {AntiCheatModel.MaxBatchSize}\n" +
-$"Largest replay token size: {_largestReplayTokenSize} (KBytes: {_largestReplayTokenSize * sizeof(float) / 1000}, in batches: {(int)Math.Ceiling(_largestReplayTokenSize / (double)AntiCheatModel.Config.TotalFeatureSizePerChunk)})\n" +
-$"Largest token size processed: {_largestTokenSize} (KBytes: {_largestTokenSize * sizeof(float) / 1000}, in batches: {(int)Math.Ceiling(_largestTokenSize / (double)AntiCheatModel.Config.TotalFeatureSizePerChunk)})\n" +
-$"Largest output size: {_largestSegmentSize}\n" +
+//$"Largest replay token size: {_largestReplayTokenSize} (KBytes: {_largestReplayTokenSize * sizeof(float) / 1000}, in batches: {(int)Math.Ceiling(_largestReplayTokenSize / (double)AntiCheatModel.Config.TotalFeatureSizePerChunk)})\n" +
+//$"Largest token size processed: {_largestTokenSize} (KBytes: {_largestTokenSize * sizeof(float) / 1000}, in batches: {(int)Math.Ceiling(_largestTokenSize / (double)AntiCheatModel.Config.TotalFeatureSizePerChunk)})\n" +
+//$"Largest output size: {_largestSegmentSize}\n" +
 $"Steps per second: {stepsPerSecond:n1}\n" +
 $"Replays per second: {replaysPerSecond:n1}");
         }

@@ -381,8 +381,8 @@ public unsafe class DatasetArchive : IDisposable
                 totalDevDeltaTime += devDeltaTime * devDeltaTime;
                 totalDevX += devX * devX;
                 totalDevY += devY * devY;
-                totalDeltaX += devDeltaX * devDeltaX;
-                totalDeltaY += devDeltaY * devDeltaY;
+                totalDevDeltaX += devDeltaX * devDeltaX;
+                totalDevDeltaY += devDeltaY * devDeltaY;
             }
 
             progress?.Report(progressValue);
@@ -510,19 +510,9 @@ public unsafe class DatasetArchive : IDisposable
     ReplayDatasetEntry GetDatasetEntry(int index)
     {
         DatasetContentAccessor content = GetEntry(index);
-        float[] data = new float[content.Length / sizeof(float)];
+        float[] data = new float[content.Length * sizeof(DatasetStepAccessor) / sizeof(float)];
 
-        int dataIndex = 0;
-        for (int i = 0; i < content.Length; i++)
-        {
-            DatasetStepAccessor* step = content.Content + i;
-
-            data[dataIndex++] = step->DeltaTime;
-            data[dataIndex++] = step->X;
-            data[dataIndex++] = step->Y;
-            data[dataIndex++] = step->DeltaX;
-            data[dataIndex++] = step->DeltaY;
-        }
+        Marshal.Copy((nint)content.Content, data, 0, data.Length);
 
         return new ReplayDatasetEntry
         {
