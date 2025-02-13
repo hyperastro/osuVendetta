@@ -83,11 +83,12 @@ public abstract class DatasetTrainer : IDatasetTrainer
                 epoch < epochsToTrain)
         {
             EpochStats stats = TrainEpoch(epoch, cancellationToken);
-            epoch++;
 
-            using FileStream modelStream = File.Create($"model.{DateTime.Now.Ticks}.bin");
+            using FileStream modelStream = File.Create($"model.{epoch}.bin");
             using BinaryWriter writer = new BinaryWriter(modelStream);
             AntiCheatModel.Save(writer);
+
+            epoch++;
         }
     }
 
