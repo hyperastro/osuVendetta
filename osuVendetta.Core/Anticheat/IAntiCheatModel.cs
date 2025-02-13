@@ -49,12 +49,12 @@ public interface IAntiCheatModel
     /// Loads the model
     /// </summary>
     /// <param name="modelSafetensors"></param>
-    void Load(Stream model);
+    void Load(BinaryReader reader);
 
     /// <summary>
     /// Saves the model
     /// </summary>
-    void Save(Stream model);
+    void Save(BinaryWriter writer);
     void Reset();
         
     IEnumerable<Parameter> GetParameters();

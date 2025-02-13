@@ -138,15 +138,13 @@ public class AntiCheatModel128x3 : Module<LstmData, LstmData>, IAntiCheatModel
         }
     }
 
-    public void Load(Stream model)
+    public void Load(BinaryReader reader)
     {
-        using BinaryReader reader = new BinaryReader(model);
         load(reader, true);
     }
 
-    public void Save(Stream model)
+    public void Save(BinaryWriter writer)
     {
-        using BinaryWriter writer = new BinaryWriter(model);
         save(writer);
     }
 

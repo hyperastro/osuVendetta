@@ -50,7 +50,8 @@ internal class AntiCheatService : IHostedService
         if (!string.IsNullOrEmpty(config.ModelPath) && File.Exists(config.ModelPath))
         {
             using FileStream modelStream = File.OpenRead(config.ModelPath);
-            _antiCheatModel.Load(modelStream);
+            using BinaryReader reader = new BinaryReader(modelStream);
+            _antiCheatModel.Load(reader);
         }
     }
 

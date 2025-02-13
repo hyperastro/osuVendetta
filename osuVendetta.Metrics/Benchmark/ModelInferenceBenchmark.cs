@@ -31,7 +31,8 @@ public class ModelInferenceBenchmark
         _antiCheatModel.SetDevice(TorchSharp.DeviceType.CUDA);
 
         using FileStream modelStream = File.OpenRead(_config.ModelPath);
-        _antiCheatModel.Load(modelStream);
+        using BinaryReader reader = new BinaryReader(modelStream);
+        _antiCheatModel.Load(reader);
 
         _replayProcessor = new ReplayProcessor(_antiCheatModel);
 

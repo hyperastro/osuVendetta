@@ -85,8 +85,9 @@ public abstract class DatasetTrainer : IDatasetTrainer
             EpochStats stats = TrainEpoch(epoch, cancellationToken);
             epoch++;
 
-            using FileStream modelStream = File.Create($"model.{DateTime.Now:dd:MM}.bin");
-            AntiCheatModel.Save(modelStream);
+            using FileStream modelStream = File.Create($"model.{DateTime.Now.Ticks}.bin");
+            using BinaryWriter writer = new BinaryWriter(modelStream);
+            AntiCheatModel.Save(writer);
         }
     }
 
