@@ -994,3 +994,4 @@ $RECYCLE.BIN/
 /Config
 /osuVendetta.CLI/ConfigDir.cs
 /osuVendetta.CLI/ConfigDir.cs
+/osuVendetta.ScoreWatcher/appsettings.Production.json

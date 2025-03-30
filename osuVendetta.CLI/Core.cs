@@ -25,8 +25,12 @@ internal class Program
         int width = 150;
         int height = 35;
 
+        try
+        {
         Console.SetWindowSize(width, height);
         Console.SetBufferSize(width, height);
+        }
+        catch (PlatformNotSupportedException) {}
 
         if (args.Length > 0)
             await RunCommandApp(args);

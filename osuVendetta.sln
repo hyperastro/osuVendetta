@@ -13,6 +13,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osuVendetta.Metrics", "osuVendetta.Metrics\osuVendetta.Metrics.csproj", "{9519D16D-AF01-4CD3-9DE0-529700CF919F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osuVendetta.ScoreWatcher", "osuVendetta.ScoreWatcher\osuVendetta.ScoreWatcher.csproj", "{AC664E47-093B-4186-BF92-83AC41F1B07F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osuVendetta.OsuApi", "osuVendetta.OsuApi\osuVendetta.OsuApi.csproj", "{763E44B2-6760-4952-8872-DE17777BF759}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug-Linux-Cpu|x64 = Debug-Linux-Cpu|x64
@@ -89,6 +93,38 @@ Global
 		{9519D16D-AF01-4CD3-9DE0-529700CF919F}.Release-Win-Cpu|x64.Build.0 = Release-Win-Cpu|x64
 		{9519D16D-AF01-4CD3-9DE0-529700CF919F}.Release-Win-Cuda|x64.ActiveCfg = Release-Win-Cuda|x64
 		{9519D16D-AF01-4CD3-9DE0-529700CF919F}.Release-Win-Cuda|x64.Build.0 = Release-Win-Cuda|x64
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Debug-Linux-Cpu|x64.ActiveCfg = Debug|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Debug-Linux-Cpu|x64.Build.0 = Debug|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Debug-Linux-Cuda|x64.ActiveCfg = Debug|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Debug-Linux-Cuda|x64.Build.0 = Debug|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Debug-Win-Cpu|x64.ActiveCfg = Debug|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Debug-Win-Cpu|x64.Build.0 = Debug|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Debug-Win-Cuda|x64.ActiveCfg = Debug|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Debug-Win-Cuda|x64.Build.0 = Debug|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Release-Linux-Cpu|x64.ActiveCfg = Release|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Release-Linux-Cpu|x64.Build.0 = Release|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Release-Linux-Cuda|x64.ActiveCfg = Release|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Release-Linux-Cuda|x64.Build.0 = Release|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Release-Win-Cpu|x64.ActiveCfg = Release|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Release-Win-Cpu|x64.Build.0 = Release|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Release-Win-Cuda|x64.ActiveCfg = Release|Any CPU
+		{AC664E47-093B-4186-BF92-83AC41F1B07F}.Release-Win-Cuda|x64.Build.0 = Release|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Debug-Linux-Cpu|x64.ActiveCfg = Debug|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Debug-Linux-Cpu|x64.Build.0 = Debug|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Debug-Linux-Cuda|x64.ActiveCfg = Debug|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Debug-Linux-Cuda|x64.Build.0 = Debug|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Debug-Win-Cpu|x64.ActiveCfg = Debug|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Debug-Win-Cpu|x64.Build.0 = Debug|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Debug-Win-Cuda|x64.ActiveCfg = Debug|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Debug-Win-Cuda|x64.Build.0 = Debug|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Release-Linux-Cpu|x64.ActiveCfg = Release|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Release-Linux-Cpu|x64.Build.0 = Release|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Release-Linux-Cuda|x64.ActiveCfg = Release|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Release-Linux-Cuda|x64.Build.0 = Release|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Release-Win-Cpu|x64.ActiveCfg = Release|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Release-Win-Cpu|x64.Build.0 = Release|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Release-Win-Cuda|x64.ActiveCfg = Release|Any CPU
+		{763E44B2-6760-4952-8872-DE17777BF759}.Release-Win-Cuda|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

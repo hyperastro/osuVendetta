@@ -43,15 +43,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Data\model.41.bin" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Data\model.41.bin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="TorchSharp" Version="0.105.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\osuVendetta.Core\osuVendetta.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Data\" />
   </ItemGroup>
 
 </Project>
