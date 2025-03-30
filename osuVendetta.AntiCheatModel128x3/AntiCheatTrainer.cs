@@ -24,7 +24,7 @@ public class AntiCheatTrainer : DatasetTrainer
 
     protected override OptimizerHelper CreateOptimizer()
     {
-        return new AdamW(AntiCheatModel.GetParameters(), lr: 0.002, weight_decay: 1e-3);
+        return new AdamW(AntiCheatModel.GetParameters(), lr: 0.0002, weight_decay: 1e-3);
         //return new Prodigy(AntiCheatModel.GetParameters(), weightDecay: .1f, decouple: true);
     }
 

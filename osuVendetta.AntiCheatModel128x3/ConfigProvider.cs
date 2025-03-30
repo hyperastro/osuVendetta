@@ -22,24 +22,24 @@ internal static class ConfigProvider
             Dropout = 0.3,
 
             StepOverlay = 0,
-            StepsPerChunk = 500,
+            StepsPerChunk = 256,
             FeaturesPerStep = 6,
 
             StandardMean = new ScalerValues
             {
-                DeltaTime = 14.091803334053385f,
-                X = 255.94747118245044f,
-                Y = 192.43203651627053f,
-                DeltaX = 0.006618787601832843f,
-                DeltaY = 0.06667060675316294f,
+                DeltaTime = 26.268179f,
+                X = 26.91232f,
+                Y = 26.112173f,
+                DeltaX = 26.447939f,
+                DeltaY = 26.407267f,
             },
             StandardDeviation = new ScalerValues
             {
-                DeltaTime = 2178.834268435404f,
-                X = 211.089933155007f,
-                Y = 363.27989919306765f,
-                DeltaX = 43.42019885061354f,
-                DeltaY = 156.50799405495763f,
+                DeltaTime = 166.9607f,
+                X = 341.29846f,
+                Y = 333.1856f,
+                DeltaX = 286.3734f,
+                DeltaY = 142.87782f,
             }
         };
     }

@@ -224,7 +224,7 @@ $"Replays per second: {replaysPerSecond:n1}");
         return new ReplayTestResult(averageProbability, probabilities,
             truePositives, trueNegatives, falsePositives, falseNegatives);
     }
-
+    
     void TrainStep(StepArgs args)
     {
         using IDisposable scope = NewDisposeScope();
@@ -242,7 +242,6 @@ $"Replays per second: {replaysPerSecond:n1}");
             while (tokensRemaining.Length > 0)
             {
                 int toTake = Math.Min(tokensRemaining.Length, maxFeatureSize);
-
                 Span<float> tokens = tokensRemaining[..toTake];
                 tokensRemaining = tokensRemaining[toTake..];
 
@@ -263,10 +262,19 @@ $"Replays per second: {replaysPerSecond:n1}");
         }
         else
         {
-           _ = RunTrainingInference(args.Replay.ReplayTokens, args.Replay.Class);
+            _ = RunTrainingInference(args.Replay.ReplayTokens, args.Replay.Class);
         }
 
-        nn.utils.clip_grad_norm_(AntiCheatModel.GetParameters(), MaxGradNorm);
+        foreach (var param in AntiCheatModel.GetParameters())
+        {
+            if (param.isnan().any().item<bool>())
+            {
+                throw new Exception($"NaN detected in parameter: {param}");
+            }
+        }
+
+        nn.utils.clip_grad_norm_(AntiCheatModel.GetParameters(), 0.5f);
+
         _ = Optimizer.step();
     }
 
@@ -278,9 +286,11 @@ $"Replays per second: {replaysPerSecond:n1}");
         using IDisposable scope = NewDisposeScope();
 
         LstmData data = AntiCheatModel.RunInference(tokens, true, hiddenStates);
+
         Tensor classLabels = CreateClassLabels((int)data.Data.shape[0], @class);
         Tensor loss = LossCriterion.forward(data.Data, classLabels);
-
+        loss += 1e-8f;
+        torch.autograd.set_detect_anomaly(true);
         loss.backward();
 
         if (data.Data.shape[0] > _largestSegmentSize)
@@ -288,7 +298,8 @@ $"Replays per second: {replaysPerSecond:n1}");
 
         _totalSegmentSteps++;
 
-        (Tensor H0, Tensor C0) result = data.HiddenState!.Value;
+        
+        (Tensor H0, Tensor C0) result = data.DetachHiddenState()!.Value;
         result.H0.MoveToOuterDisposeScope();
         result.C0.MoveToOuterDisposeScope();
 
